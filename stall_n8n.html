@@ -6,6 +6,7 @@
     <title>攤位通知設定</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
+        /* 樣式區 - 保持簡潔好看 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f0f2f5;
@@ -60,13 +61,38 @@
             color: #666;
             word-break: break-all;
         }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1DB446;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h2>⚙️ 攤位關鍵字設定</h2>
-        <div id="loading">載入中...</div>
+
+        <div id="loadingBlock">
+            <div class="loader" style="display:block;"></div>
+            <p>正在讀取您的設定...</p>
+        </div>
 
         <div id="content" style="display:none;">
             <p id="welcomeMsg">Hi</p>
@@ -81,40 +107,74 @@
     </div>
 
     <script>
-        // ★★★ 請修改這裡 ★★★
+        // ==========================================
+        // ★★★ 設定區 (請確認這裡正確) ★★★
+        // ==========================================
         const MY_LIFF_ID = "2008700928-mrYiKQ76";
-        const WEBHOOK_URL = "https://marketdigitlab.com/webhook/save-preference";
 
-        // 初始化
-        window.onload = function() {
+        // 1. 讀取用的 (GET) - 剛做好的那個
+        const GET_URL = "https://marketdigitlab.com/webhook/get-preference";
+
+        // 2. 存檔用的 (POST) - 之前做好的那個
+        const SAVE_URL = "https://marketdigitlab.com/webhook/save-preference";
+        // ==========================================
+
+        window.onload = function () {
             initializeLiff();
         };
 
         async function initializeLiff() {
             try {
+                // 1. 初始化 LIFF
                 await liff.init({ liffId: MY_LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
                 }
 
+                // 2. 取得用戶 ID
                 const profile = await liff.getProfile();
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('content').style.display = 'block';
-                document.getElementById('welcomeMsg').innerText = "Hi, " + profile.displayName;
+                const userId = profile.userId;
+                window.currentUser = profile; // 存起來備用
 
-                // 這裡把 userId 存起來，等等送出用
-                window.userId = profile.userId;
+                // 3. 呼叫 n8n 讀取舊資料
+                await fetchCurrentData(userId);
 
             } catch (err) {
-                document.getElementById('loading').innerText = "初始化失敗: " + err.message;
+                document.getElementById('loadingBlock').innerHTML = `<p style="color:red">初始化失敗: ${err.message}</p>`;
             }
         }
 
-        function submitData() {
+        // 讀取資料 (GET)
+        async function fetchCurrentData(userId) {
+            try {
+                // 呼叫 n8n，帶入 userId 參數
+                const res = await fetch(`${GET_URL}?userId=${userId}`);
+                const data = await res.json();
+
+                // 顯示畫面
+                document.getElementById('loadingBlock').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('welcomeMsg').innerText = "Hi, " + window.currentUser.displayName;
+
+                // 如果 n8n 有回傳資料，就填入輸入框
+                if (data.preferences) {
+                    document.getElementById('prefInput').value = data.preferences;
+                }
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loadingBlock').innerText = "無法讀取舊資料，請直接輸入";
+                document.getElementById('content').style.display = 'block';
+            }
+        }
+
+        // 儲存資料 (POST)
+        async function submitData() {
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
             const inputVal = document.getElementById('prefInput').value;
+            const userId = window.currentUser.userId;
 
             if (!inputVal) {
                 status.innerText = "❌ 請輸入內容";
@@ -122,33 +182,32 @@
             }
 
             btn.disabled = true;
-            btn.innerText = "傳送中...";
+            btn.innerText = "儲存中...";
             status.innerText = "";
 
-            // 使用 fetch 發送資料給 n8n
-            fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain'
-                },
-                body: JSON.stringify({
-                    userId: window.userId,
-                    preferences: inputVal
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    status.innerText = "✅ 設定已儲存！視窗將自動關閉";
-                    setTimeout(() => { liff.closeWindow(); }, 2000);
+            try {
+                // 呼叫 n8n 寫入
+                const res = await fetch(SAVE_URL, {
+                    method: 'POST',
+                    // 使用 text/plain 避免複雜的 CORS 預檢請求，n8n 需自行 parse
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        userId: userId,
+                        preferences: inputVal
+                    })
+                });
+
+                if (res.ok) {
+                    status.innerText = "✅ 設定已儲存！";
+                    setTimeout(() => liff.closeWindow(), 1500);
                 } else {
-                    throw new Error("Server回應錯誤");
+                    throw new Error("伺服器回應錯誤");
                 }
-            })
-            .catch(error => {
+            } catch (err) {
+                status.innerText = "❌ 失敗: " + err.message;
                 btn.disabled = false;
                 btn.innerText = "儲存設定";
-                status.innerText = "❌ 傳送失敗: " + error.message;
-            });
+            }
         }
     </script>
 </body>
