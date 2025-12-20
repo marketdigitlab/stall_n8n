@@ -337,7 +337,7 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // 3. 儲存資料 (POST)
+// 3. 儲存資料 (POST)
         async function submitData() {
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
@@ -348,6 +348,7 @@
                 return;
             }
 
+            // 1. 按下瞬間：鎖定按鈕，避免重複點擊
             btn.disabled = true;
             btn.innerText = "儲存中...";
             status.innerText = "";
@@ -358,21 +359,39 @@
 
                 const res = await fetch(SAVE_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // 用 text/plain 避開 CORS 預檢
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         userId: window.currentUser.userId,
                         preferences: preferencesString,
-                        notionId: currentUserNotionId // ★★★ 關鍵修改：把記住的 ID 傳回去 ★★★
+                        notionId: currentUserNotionId 
                     })
                 });
 
                 if (res.ok) {
-                    status.innerText = "✅ 設定已儲存！";
+                    // ★★★ 成功狀況修改區 ★★★
+                    
+                    // A. 顯示成功訊息
+                    status.innerText = "✅ 設定已更新！您可以繼續調整...";
+                    status.style.color = "#1DB446"; // 綠色字體
+
+                    // B. 把按鈕「解鎖」，讓使用者可以再次點擊
+                    btn.disabled = false;
+                    btn.innerText = "儲存設定";
+
+                    // C. (可選) 3秒後自動清空成功訊息，讓畫面變乾淨
+                    setTimeout(() => { 
+                        if(status.innerText.includes("✅")) status.innerText = ""; 
+                    }, 3000);
+
+                    // D. 刪除原本的 liff.closeWindow()，這樣就不會閃退了！
+
                 } else {
                     throw new Error("伺服器錯誤");
                 }
             } catch (err) {
+                // 失敗狀況：也要記得解鎖按鈕
                 status.innerText = "❌ 失敗: " + err.message;
+                status.style.color = "red";
                 btn.disabled = false;
                 btn.innerText = "儲存設定";
             }
@@ -381,5 +400,6 @@
 </body>
 
 </html>
+
 
 
