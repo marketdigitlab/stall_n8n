@@ -2,11 +2,11 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>攤位通知設定</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* 樣式區 - 保持簡潔好看 */
+        /* --- 樣式區 (包含您喜歡的標籤樣式) --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f0f2f5;
@@ -22,55 +22,143 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             max-width: 400px;
             margin: 0 auto;
+            text-align: left;
         }
 
         h2 {
             color: #1DB446;
             margin-bottom: 20px;
+            text-align: center;
         }
 
-        input {
-            width: 80%;
+        /* 標籤輸入區塊樣式 */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .tag-container {
+            border: 2px solid #eee;
+            border-radius: 12px;
             padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #fff;
+            min-height: 50px;
+            cursor: text;
+        }
+
+            .tag-container:focus-within {
+                border-color: #1DB446;
+                box-shadow: 0 0 0 2px rgba(29, 180, 70, 0.1);
+            }
+
+        .tag {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            animation: popIn 0.2s ease;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .tag span {
+            cursor: pointer;
+            margin-left: 8px;
+            font-weight: bold;
+            color: #81c784;
+            font-size: 18px;
+            line-height: 1;
+            display: inline-block;
+            padding: 0 4px;
+        }
+
+            .tag span:hover {
+                color: #d32f2f;
+            }
+
+        #tagInput {
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            padding: 5px;
             font-size: 16px;
+            min-width: 120px;
+            color: #333;
         }
 
         button {
-            width: 90%;
-            padding: 12px;
+            width: 100%;
+            padding: 14px;
             background-color: #1DB446;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.3s;
+            margin-top: 10px;
         }
 
             button:disabled {
                 background-color: #ccc;
+                cursor: not-allowed;
             }
 
+            button:hover:not(:disabled) {
+                background-color: #169c3a;
+            }
+
+        #userInfo {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        /* 狀態與載入動畫 */
         #status {
             margin-top: 15px;
             font-size: 14px;
             color: #666;
-            word-break: break-all;
+            text-align: center;
+            min-height: 20px;
         }
 
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #1DB446;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1DB446;
             border-radius: 50%;
             width: 24px;
             height: 24px;
             animation: spin 1s linear infinite;
-            margin: 10px auto;
-            display: none;
+            margin: 20px auto;
         }
 
         @keyframes spin {
@@ -82,42 +170,57 @@
                 transform: rotate(360deg);
             }
         }
+
+        #loadingBlock {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        #content {
+            display: none;
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>⚙️ 攤位關鍵字設定</h2>
+        <h2>⚙️ 攤位通知設定</h2>
 
         <div id="loadingBlock">
-            <div class="loader" style="display:block;"></div>
-            <p>正在讀取您的設定...</p>
+            <div class="loader"></div>
+            <p style="color:#666; font-size:14px;">正在讀取您的設定...</p>
         </div>
 
-        <div id="content" style="display:none;">
-            <p id="welcomeMsg">Hi</p>
-            <p style="font-size:12px; color:#888;">請輸入您想關注的攤位 (多個請用逗號隔開)</p>
+        <div id="content">
+            <div style="text-align:center;">
+                <div id="userInfo">Hi</div>
+            </div>
 
-            <input type="text" id="prefInput" placeholder="例如: 中山路, 藥燉排骨">
+            <div class="form-group">
+                <label>❤️ 您關注的攤位關鍵字</label>
+                <div class="tag-container" onclick="document.getElementById('tagInput').focus()">
+                    <div id="tagsWrapper" style="display:contents"></div>
+                    <input type="text" id="tagInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
+                </div>
+                <p style="font-size:12px; color:#999; margin-top:8px;">💡 輸入文字後按下 <b>Enter</b> 即可新增標籤，點擊 <b>×</b> 可刪除。</p>
+            </div>
 
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
+            <div id="status"></div>
         </div>
-
-        <div id="status"></div>
     </div>
 
     <script>
         // ==========================================
-        // ★★★ 設定區 (請確認這裡正確) ★★★
-        // ==========================================
+        // ★★★ 設定區 ★★★
         const MY_LIFF_ID = "2008700928-mrYiKQ76";
 
-        // 1. 讀取用的 (GET) - 剛做好的那個
+        // 請確認這兩個網址是您 Cloudflare 的網址
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-preference";
-
-        // 2. 存檔用的 (POST) - 之前做好的那個
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-preference";
         // ==========================================
+
+        let currentTags = []; // 存放目前的標籤
 
         window.onload = function () {
             initializeLiff();
@@ -125,59 +228,116 @@
 
         async function initializeLiff() {
             try {
-                // 1. 初始化 LIFF
                 await liff.init({ liffId: MY_LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
                 }
 
-                // 2. 取得用戶 ID
                 const profile = await liff.getProfile();
-                const userId = profile.userId;
-                window.currentUser = profile; // 存起來備用
+                window.currentUser = profile;
 
-                // 3. 呼叫 n8n 讀取舊資料
-                await fetchCurrentData(userId);
+                // 顯示介面
+                document.getElementById('userInfo').innerText = "Hi, " + profile.displayName;
+
+                // 去後端抓舊資料
+                await fetchCurrentData(profile.userId);
 
             } catch (err) {
                 document.getElementById('loadingBlock').innerHTML = `<p style="color:red">初始化失敗: ${err.message}</p>`;
             }
         }
 
-        // 讀取資料 (GET)
+        // 1. 讀取資料 (GET)
         async function fetchCurrentData(userId) {
             try {
-                // 呼叫 n8n，帶入 userId 參數
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 const data = await res.json();
 
-                // 顯示畫面
+                // 隱藏 Loading，顯示內容
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
-                document.getElementById('welcomeMsg').innerText = "Hi, " + window.currentUser.displayName;
 
-                // 如果 n8n 有回傳資料，就填入輸入框
+                // ★★★ 關鍵：把抓回來的字串轉成標籤 ★★★
                 if (data.preferences) {
-                    document.getElementById('prefInput').value = data.preferences;
+                    // 用逗號或頓號分割，並過濾掉空白
+                    currentTags = data.preferences.split(/[,、]/)
+                        .map(t => t.trim())
+                        .filter(t => t !== "");
+                    drawTags(); // 畫出標籤
                 }
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('loadingBlock').innerText = "無法讀取舊資料，請直接輸入";
+                document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
+                document.getElementById('status').innerText = "無法讀取舊資料，請直接輸入";
             }
         }
 
-        // 儲存資料 (POST)
+        // 2. 標籤操作邏輯 (UI)
+        const tagInput = document.getElementById('tagInput');
+
+        // 監聽按鍵事件
+        tagInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // 防止送出表單
+                addTagFromInput();
+            }
+        });
+
+        // 失去焦點時也嘗試新增 (可選)
+        tagInput.addEventListener('blur', function () {
+            addTagFromInput();
+        });
+
+        function addTagFromInput() {
+            const val = tagInput.value.trim();
+            // 如果有內容且還沒重複
+            if (val && !currentTags.includes(val)) {
+                currentTags.push(val);
+                drawTags();
+            }
+            tagInput.value = '';
+        }
+
+        // 移除標籤
+        window.removeTag = function (index) {
+            currentTags.splice(index, 1);
+            drawTags();
+        };
+
+        // 繪製標籤
+        function drawTags() {
+            const wrap = document.getElementById('tagsWrapper');
+            wrap.innerHTML = '';
+            currentTags.forEach((t, i) => {
+                const div = document.createElement('div');
+                div.className = 'tag';
+                // 使用 onclick 呼叫全域的 removeTag
+                div.innerHTML = `${escapeHtml(t)} <span onclick="removeTag(${i})">×</span>`;
+                wrap.appendChild(div);
+            });
+        }
+
+        // 簡單的 HTML 轉義防止 XSS
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 3. 儲存資料 (POST)
         async function submitData() {
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
-            const inputVal = document.getElementById('prefInput').value;
-            const userId = window.currentUser.userId;
 
-            if (!inputVal) {
-                status.innerText = "❌ 請輸入內容";
+            // 檢查有沒有標籤
+            if (currentTags.length === 0) {
+                status.innerText = "❌ 請至少輸入一個關鍵字";
                 return;
             }
 
@@ -186,14 +346,15 @@
             status.innerText = "";
 
             try {
-                // 呼叫 n8n 寫入
+                // ★★★ 關鍵：把標籤陣列組合成字串傳給 n8n ★★★
+                const preferencesString = currentTags.join(', ');
+
                 const res = await fetch(SAVE_URL, {
                     method: 'POST',
-                    // 使用 text/plain 避免複雜的 CORS 預檢請求，n8n 需自行 parse
-                    headers: { 'Content-Type': 'text/plain' },
+                    headers: { 'Content-Type': 'text/plain' }, // 用 text/plain 避開 CORS 預檢
                     body: JSON.stringify({
-                        userId: userId,
-                        preferences: inputVal
+                        userId: window.currentUser.userId,
+                        preferences: preferencesString
                     })
                 });
 
@@ -201,7 +362,7 @@
                     status.innerText = "✅ 設定已儲存！";
                     setTimeout(() => liff.closeWindow(), 1500);
                 } else {
-                    throw new Error("伺服器回應錯誤");
+                    throw new Error("伺服器錯誤");
                 }
             } catch (err) {
                 status.innerText = "❌ 失敗: " + err.message;
