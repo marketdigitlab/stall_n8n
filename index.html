@@ -217,10 +217,11 @@
 
         // 請確認這兩個網址是您 Cloudflare 的網址
         const GET_URL = "https://stall.marketdigitlab.com/webhook-test/get-preference";
-        const SAVE_URL = "https://stall.marketdigitlab.com/webhook-test/save-preference";
+        const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-preference";
         // ==========================================
 
         let currentTags = []; // 存放目前的標籤
+        let currentUserNotionId = ""; // ★★★ 新增：暫存 Notion ID 用 ★★★
 
         window.onload = function () {
             initializeLiff();
@@ -258,7 +259,13 @@
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
 
-                // ★★★ 關鍵：把抓回來的字串轉成標籤 ★★★
+                // ★★★ 關鍵修改：如果有回傳 notionId，就把它記下來 ★★★
+                if (data.notionId) {
+                    currentUserNotionId = data.notionId;
+                    console.log("已取得 Notion ID:", currentUserNotionId);
+                }
+
+                // 把抓回來的字串轉成標籤
                 if (data.preferences) {
                     // 用逗號或頓號分割，並過濾掉空白
                     currentTags = data.preferences.split(/[,、]/)
@@ -346,7 +353,7 @@
             status.innerText = "";
 
             try {
-                // ★★★ 關鍵：把標籤陣列組合成字串傳給 n8n ★★★
+                // 把標籤陣列組合成字串
                 const preferencesString = currentTags.join(', ');
 
                 const res = await fetch(SAVE_URL, {
@@ -354,7 +361,8 @@
                     headers: { 'Content-Type': 'text/plain' }, // 用 text/plain 避開 CORS 預檢
                     body: JSON.stringify({
                         userId: window.currentUser.userId,
-                        preferences: preferencesString
+                        preferences: preferencesString,
+                        notionId: currentUserNotionId // ★★★ 關鍵修改：把記住的 ID 傳回去 ★★★
                     })
                 });
 
