@@ -197,7 +197,7 @@
             </div>
 
             <div class="form-group">
-                <label>❤️ 您關注的攤位關鍵字</label>
+                <label>❤️ 您關注的攤位</label>
                 <div class="tag-container" onclick="document.getElementById('tagInput').focus()">
                     <div id="tagsWrapper" style="display:contents"></div>
                     <input type="text" id="tagInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
@@ -368,7 +368,6 @@
 
                 if (res.ok) {
                     status.innerText = "✅ 設定已儲存！";
-                    setTimeout(() => liff.closeWindow(), 1500);
                 } else {
                     throw new Error("伺服器錯誤");
                 }
@@ -382,4 +381,5 @@
 </body>
 
 </html>
+
 
