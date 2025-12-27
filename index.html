@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@
     <title>攤位通知設定</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* --- 樣式區 (包含您喜歡的標籤樣式) --- */
+        /* --- 樣式區 --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f0f2f5;
@@ -34,6 +34,12 @@
         /* 標籤輸入區塊樣式 */
         .form-group {
             margin-bottom: 25px;
+            border-bottom: 1px dashed #eee; /* 區隔線 */
+            padding-bottom: 20px;
+        }
+        
+        .form-group:last-of-type {
+            border-bottom: none;
         }
 
         label {
@@ -41,6 +47,7 @@
             margin-bottom: 10px;
             font-weight: 600;
             color: #444;
+            font-size: 1.1em;
         }
 
         .tag-container {
@@ -53,12 +60,13 @@
             background: #fff;
             min-height: 50px;
             cursor: text;
+            transition: all 0.3s;
         }
 
-            .tag-container:focus-within {
-                border-color: #1DB446;
-                box-shadow: 0 0 0 2px rgba(29, 180, 70, 0.1);
-            }
+        .tag-container:focus-within {
+            border-color: #1DB446;
+            box-shadow: 0 0 0 2px rgba(29, 180, 70, 0.1);
+        }
 
         .tag {
             background-color: #e8f5e9;
@@ -72,15 +80,8 @@
         }
 
         @keyframes popIn {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
 
         .tag span {
@@ -94,11 +95,11 @@
             padding: 0 4px;
         }
 
-            .tag span:hover {
-                color: #d32f2f;
-            }
+        .tag span:hover {
+            color: #d32f2f;
+        }
 
-        #tagInput {
+        input[type="text"] {
             border: none;
             outline: none;
             flex-grow: 1;
@@ -122,14 +123,14 @@
             margin-top: 10px;
         }
 
-            button:disabled {
-                background-color: #ccc;
-                cursor: not-allowed;
-            }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
 
-            button:hover:not(:disabled) {
-                background-color: #169c3a;
-            }
+        button:hover:not(:disabled) {
+            background-color: #169c3a;
+        }
 
         #userInfo {
             background: #e8f5e9;
@@ -142,7 +143,6 @@
             margin-bottom: 20px;
         }
 
-        /* 狀態與載入動畫 */
         #status {
             margin-top: 15px;
             font-size: 14px;
@@ -162,13 +162,8 @@
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         #loadingBlock {
@@ -178,6 +173,12 @@
 
         #content {
             display: none;
+        }
+        
+        .hint-text {
+            font-size: 12px; 
+            color: #999; 
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -197,12 +198,20 @@
             </div>
 
             <div class="form-group">
-                <label>❤️ 您關注的攤位</label>
-                <div class="tag-container" onclick="document.getElementById('tagInput').focus()">
-                    <div id="tagsWrapper" style="display:contents"></div>
-                    <input type="text" id="tagInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
+                <label>📍 【北區市場】您關注的攤位</label>
+                <div class="tag-container" onclick="document.getElementById('northInput').focus()">
+                    <div id="northTagsWrapper" style="display:contents"></div>
+                    <input type="text" id="northInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
                 </div>
-                <p style="font-size:12px; color:#999; margin-top:8px;">💡 輸入文字後按下 <b>Enter</b> 即可新增標籤，點擊 <b>×</b> 可刪除。</p>
+            </div>
+
+            <div class="form-group">
+                <label>📍 【中區市場】您關注的攤位</label>
+                <div class="tag-container" onclick="document.getElementById('centralInput').focus()">
+                    <div id="centralTagsWrapper" style="display:contents"></div>
+                    <input type="text" id="centralInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
+                </div>
+                <p class="hint-text">💡 輸入文字後按下 <b>Enter</b> 即可新增標籤，點擊 <b>×</b> 可刪除。</p>
             </div>
 
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
@@ -220,8 +229,10 @@
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-preference";
         // ==========================================
 
-        let currentTags = []; // 存放目前的標籤
-        let currentUserNotionId = ""; // ★★★ 新增：暫存 Notion ID 用 ★★★
+        // 分開儲存兩區的標籤
+        let northTags = []; 
+        let centralTags = [];
+        let currentUserNotionId = "";
 
         window.onload = function () {
             initializeLiff();
@@ -238,9 +249,8 @@
                 const profile = await liff.getProfile();
                 window.currentUser = profile;
 
-                // 顯示介面
                 document.getElementById('userInfo').innerText = "Hi, " + profile.displayName;
-
+                
                 // 去後端抓舊資料
                 await fetchCurrentData(profile.userId);
 
@@ -255,24 +265,27 @@
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 const data = await res.json();
 
-                // 隱藏 Loading，顯示內容
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
 
-                // ★★★ 關鍵修改：如果有回傳 notionId，就把它記下來 ★★★
                 if (data.notionId) {
                     currentUserNotionId = data.notionId;
-                    console.log("已取得 Notion ID:", currentUserNotionId);
                 }
 
-                // 把抓回來的字串轉成標籤
-                if (data.preferences) {
-                    // 用逗號或頓號分割，並過濾掉空白
-                    currentTags = data.preferences.split(/[,、]/)
-                        .map(t => t.trim())
-                        .filter(t => t !== "");
-                    drawTags(); // 畫出標籤
+                // 處理北區資料 (後端欄位名稱需改為 northPreferences)
+                if (data.northPreferences) {
+                    northTags = parseTags(data.northPreferences);
+                } else if (data.preferences) {
+                     // 兼容舊格式：如果後端還沒改，先把舊的當作北區
+                    northTags = parseTags(data.preferences);
                 }
+
+                // 處理中區資料 (後端欄位名稱需改為 centralPreferences)
+                if (data.centralPreferences) {
+                    centralTags = parseTags(data.centralPreferences);
+                }
+
+                drawAllTags();
 
             } catch (err) {
                 console.error(err);
@@ -282,114 +295,121 @@
             }
         }
 
+        // 解析字串轉陣列的輔助函式
+        function parseTags(str) {
+            if(!str) return [];
+            return str.split(/[,、]/).map(t => t.trim()).filter(t => t !== "");
+        }
+
         // 2. 標籤操作邏輯 (UI)
-        const tagInput = document.getElementById('tagInput');
+        const northInput = document.getElementById('northInput');
+        const centralInput = document.getElementById('centralInput');
 
-        // 監聽按鍵事件
-        tagInput.addEventListener('keydown', function (e) {
+        // 北區輸入監聽
+        northInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
-                e.preventDefault(); // 防止送出表單
-                addTagFromInput();
+                e.preventDefault();
+                addTag('north');
             }
         });
+        northInput.addEventListener('blur', function () { addTag('north'); });
 
-        // 失去焦點時也嘗試新增 (可選)
-        tagInput.addEventListener('blur', function () {
-            addTagFromInput();
-        });
-
-        function addTagFromInput() {
-            const val = tagInput.value.trim();
-            // 如果有內容且還沒重複
-            if (val && !currentTags.includes(val)) {
-                currentTags.push(val);
-                drawTags();
+        // 中區輸入監聽
+        centralInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag('central');
             }
-            tagInput.value = '';
+        });
+        centralInput.addEventListener('blur', function () { addTag('central'); });
+
+
+        function addTag(type) {
+            const inputEl = type === 'north' ? northInput : centralInput;
+            const targetArray = type === 'north' ? northTags : centralTags;
+            const val = inputEl.value.trim();
+
+            if (val && !targetArray.includes(val)) {
+                targetArray.push(val);
+                drawAllTags();
+            }
+            inputEl.value = '';
         }
 
         // 移除標籤
-        window.removeTag = function (index) {
-            currentTags.splice(index, 1);
-            drawTags();
+        window.removeTag = function (type, index) {
+            if (type === 'north') {
+                northTags.splice(index, 1);
+            } else {
+                centralTags.splice(index, 1);
+            }
+            drawAllTags();
         };
 
-        // 繪製標籤
-        function drawTags() {
-            const wrap = document.getElementById('tagsWrapper');
+        // 統一繪製
+        function drawAllTags() {
+            renderTagsToDiv(northTags, 'northTagsWrapper', 'north');
+            renderTagsToDiv(centralTags, 'centralTagsWrapper', 'central');
+        }
+
+        function renderTagsToDiv(tags, wrapperId, type) {
+            const wrap = document.getElementById(wrapperId);
             wrap.innerHTML = '';
-            currentTags.forEach((t, i) => {
+            tags.forEach((t, i) => {
                 const div = document.createElement('div');
                 div.className = 'tag';
-                // 使用 onclick 呼叫全域的 removeTag
-                div.innerHTML = `${escapeHtml(t)} <span onclick="removeTag(${i})">×</span>`;
+                // 傳入 type 讓 removeTag 知道要刪哪一區
+                div.innerHTML = `${escapeHtml(t)} <span onclick="removeTag('${type}', ${i})">×</span>`;
                 wrap.appendChild(div);
             });
         }
 
-        // 簡單的 HTML 轉義防止 XSS
         function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-// 3. 儲存資料 (POST)
+        // 3. 儲存資料 (POST)
         async function submitData() {
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
 
-            // 檢查有沒有標籤
-            if (currentTags.length === 0) {
-                status.innerText = "❌ 請至少輸入一個關鍵字";
+            // 檢查是否兩區都空 (視需求而定，這裡允許其中一區為空，只要不是全空即可)
+            if (northTags.length === 0 && centralTags.length === 0) {
+                status.innerText = "❌ 請至少輸入一個關注的攤位";
                 return;
             }
 
-            // 1. 按下瞬間：鎖定按鈕，避免重複點擊
             btn.disabled = true;
             btn.innerText = "儲存中...";
             status.innerText = "";
 
             try {
-                // 把標籤陣列組合成字串
-                const preferencesString = currentTags.join(', ');
+                const northString = northTags.join(', ');
+                const centralString = centralTags.join(', ');
 
                 const res = await fetch(SAVE_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
+                    headers: { 'Content-Type': 'text/plain' }, // 配合 n8n webhook 接收
                     body: JSON.stringify({
                         userId: window.currentUser.userId,
-                        preferences: preferencesString,
+                        northPreferences: northString,   // 新欄位名
+                        centralPreferences: centralString, // 新欄位名
                         notionId: currentUserNotionId 
                     })
                 });
 
                 if (res.ok) {
-                    // ★★★ 成功狀況修改區 ★★★
-                    
-                    // A. 顯示成功訊息
-                    status.innerText = "✅ 設定已更新！您可以繼續調整...";
-                    status.style.color = "#1DB446"; // 綠色字體
-
-                    // B. 把按鈕「解鎖」，讓使用者可以再次點擊
+                    status.innerText = "✅ 設定已更新！";
+                    status.style.color = "#1DB446";
                     btn.disabled = false;
                     btn.innerText = "儲存設定";
-
-                    // C. (可選) 3秒後自動清空成功訊息，讓畫面變乾淨
                     setTimeout(() => { 
                         if(status.innerText.includes("✅")) status.innerText = ""; 
                     }, 3000);
-
-                    // D. 刪除原本的 liff.closeWindow()，這樣就不會閃退了！
-
                 } else {
                     throw new Error("伺服器錯誤");
                 }
             } catch (err) {
-                // 失敗狀況：也要記得解鎖按鈕
                 status.innerText = "❌ 失敗: " + err.message;
                 status.style.color = "red";
                 btn.disabled = false;
@@ -398,8 +418,4 @@
         }
     </script>
 </body>
-
 </html>
-
-
-
