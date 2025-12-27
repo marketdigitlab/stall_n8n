@@ -201,7 +201,7 @@
                 <label>📍 【北區市場】您關注的攤位</label>
                 <div class="tag-container" onclick="document.getElementById('northInput').focus()">
                     <div id="northTagsWrapper" style="display:contents"></div>
-                    <input type="text" id="northInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
+                    <input type="text" id="northInput" placeholder="輸入後按 Enter 新增..." autocomplete="off" enterkeyhint="enter">
                 </div>
             </div>
 
@@ -209,7 +209,7 @@
                 <label>📍 【中區市場】您關注的攤位</label>
                 <div class="tag-container" onclick="document.getElementById('centralInput').focus()">
                     <div id="centralTagsWrapper" style="display:contents"></div>
-                    <input type="text" id="centralInput" placeholder="輸入後按 Enter 新增..." autocomplete="off">
+                    <input type="text" id="centralInput" placeholder="輸入後按 Enter 新增..." autocomplete="off" enterkeyhint="enter">
                 </div>
                 <p class="hint-text">💡 輸入文字後按下 <b>Enter</b> 即可新增標籤，點擊 <b>×</b> 可刪除。</p>
             </div>
@@ -223,13 +223,10 @@
         // ==========================================
         // ★★★ 設定區 ★★★
         const MY_LIFF_ID = "2008700928-mrYiKQ76";
-
-        // 請確認這兩個網址是您 Cloudflare 的網址
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         // ==========================================
 
-        // 分開儲存兩區的標籤
         let northTags = []; 
         let centralTags = [];
         let currentUserNotionId = "";
@@ -245,21 +242,15 @@
                     liff.login();
                     return;
                 }
-
                 const profile = await liff.getProfile();
                 window.currentUser = profile;
-
                 document.getElementById('userInfo').innerText = "Hi, " + profile.displayName;
-                
-                // 去後端抓舊資料
                 await fetchCurrentData(profile.userId);
-
             } catch (err) {
                 document.getElementById('loadingBlock').innerHTML = `<p style="color:red">初始化失敗: ${err.message}</p>`;
             }
         }
 
-        // 1. 讀取資料 (GET)
         async function fetchCurrentData(userId) {
             try {
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
@@ -268,25 +259,13 @@
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
 
-                if (data.notionId) {
-                    currentUserNotionId = data.notionId;
-                }
-
-                // 處理北區資料 (後端欄位名稱需改為 northPreferences)
-                if (data.northPreferences) {
-                    northTags = parseTags(data.northPreferences);
-                } else if (data.preferences) {
-                     // 兼容舊格式：如果後端還沒改，先把舊的當作北區
-                    northTags = parseTags(data.preferences);
-                }
-
-                // 處理中區資料 (後端欄位名稱需改為 centralPreferences)
-                if (data.centralPreferences) {
-                    centralTags = parseTags(data.centralPreferences);
-                }
+                if (data.notionId) { currentUserNotionId = data.notionId; }
+                if (data.northPreferences) { northTags = parseTags(data.northPreferences); }
+                else if (data.preferences) { northTags = parseTags(data.preferences); }
+                
+                if (data.centralPreferences) { centralTags = parseTags(data.centralPreferences); }
 
                 drawAllTags();
-
             } catch (err) {
                 console.error(err);
                 document.getElementById('loadingBlock').style.display = 'none';
@@ -295,34 +274,38 @@
             }
         }
 
-        // 解析字串轉陣列的輔助函式
         function parseTags(str) {
             if(!str) return [];
             return str.split(/[,、]/).map(t => t.trim()).filter(t => t !== "");
         }
 
-        // 2. 標籤操作邏輯 (UI)
         const northInput = document.getElementById('northInput');
         const centralInput = document.getElementById('centralInput');
 
-        // 北區輸入監聽
+        // ==========================================
+        // ★★★ 修正2: 鍵盤 Enter 邏輯修正 ★★★
+        // ==========================================
+        
         northInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
-                e.preventDefault();
+                e.preventDefault(); // 1. 阻止跳去下一格的預設行為
                 addTag('north');
+                // 2. 強制把焦點抓回來，確保不跳走
+                northInput.focus(); 
             }
         });
         northInput.addEventListener('blur', function () { addTag('north'); });
 
-        // 中區輸入監聽
         centralInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
-                e.preventDefault();
+                e.preventDefault(); // 1. 阻止跳去下一格
                 addTag('central');
+                // 2. 強制把焦點抓回來
+                centralInput.focus();
             }
         });
         centralInput.addEventListener('blur', function () { addTag('central'); });
-
+        // ==========================================
 
         function addTag(type) {
             const inputEl = type === 'north' ? northInput : centralInput;
@@ -336,17 +319,12 @@
             inputEl.value = '';
         }
 
-        // 移除標籤
         window.removeTag = function (type, index) {
-            if (type === 'north') {
-                northTags.splice(index, 1);
-            } else {
-                centralTags.splice(index, 1);
-            }
+            if (type === 'north') northTags.splice(index, 1);
+            else centralTags.splice(index, 1);
             drawAllTags();
         };
 
-        // 統一繪製
         function drawAllTags() {
             renderTagsToDiv(northTags, 'northTagsWrapper', 'north');
             renderTagsToDiv(centralTags, 'centralTagsWrapper', 'central');
@@ -358,7 +336,6 @@
             tags.forEach((t, i) => {
                 const div = document.createElement('div');
                 div.className = 'tag';
-                // 傳入 type 讓 removeTag 知道要刪哪一區
                 div.innerHTML = `${escapeHtml(t)} <span onclick="removeTag('${type}', ${i})">×</span>`;
                 wrap.appendChild(div);
             });
@@ -368,12 +345,10 @@
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // 3. 儲存資料 (POST)
         async function submitData() {
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
 
-            // 檢查是否兩區都空 (視需求而定，這裡允許其中一區為空，只要不是全空即可)
             if (northTags.length === 0 && centralTags.length === 0) {
                 status.innerText = "❌ 請至少輸入一個關注的攤位";
                 return;
@@ -389,11 +364,11 @@
 
                 const res = await fetch(SAVE_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // 配合 n8n webhook 接收
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         userId: window.currentUser.userId,
-                        northPreferences: northString,   // 新欄位名
-                        centralPreferences: centralString, // 新欄位名
+                        northPreferences: northString,
+                        centralPreferences: centralString,
                         notionId: currentUserNotionId 
                     })
                 });
@@ -419,6 +394,3 @@
     </script>
 </body>
 </html>
-
-
-
