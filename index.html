@@ -256,19 +256,16 @@
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 const data = await res.json();
 
-                // ==========================================
-                // ★★★ 修改: 隱藏註冊指令，改為顯示聯絡信箱 ★★★
-                // ==========================================
                 if (data.isUserFound === false) {
                     document.getElementById('loadingBlock').style.display = 'none';
-                    // 替換原本的內容區塊
                     const contentDiv = document.getElementById('content');
                     contentDiv.innerHTML = `
                         <div style="text-align: center; padding: 40px 20px;">
                             <div style="font-size: 60px;">🔒</div>
                             <h3 style="color: #555; margin: 20px 0;">無存取權限</h3>
                             <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-                            系統找不到您的建檔資料，請聯繫團隊開通權限：
+                            系統找不到您的建檔資料，<br>
+                            請聯繫團隊開通權限：
                             </p>
                             <a href="mailto:marketdigit.lab@gmail.com" style="
                                 display: inline-block;
@@ -428,5 +425,6 @@
     </script>
 </body>
 </html>
+
 
 
