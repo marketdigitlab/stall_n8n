@@ -251,10 +251,45 @@
             }
         }
 
-        async function fetchCurrentData(userId) {
+       async function fetchCurrentData(userId) {
             try {
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 const data = await res.json();
+
+                // ==========================================
+                // ★★★ 修改: 隱藏註冊指令，改為顯示聯絡信箱 ★★★
+                // ==========================================
+                if (data.isUserFound === false) {
+                    document.getElementById('loadingBlock').style.display = 'none';
+                    // 替換原本的內容區塊
+                    const contentDiv = document.getElementById('content');
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 60px;">🔒</div>
+                            <h3 style="color: #555; margin: 20px 0;">無存取權限</h3>
+                            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+                                系統目前找不到您的建檔資料。<br>
+                                若您是內部人員，請聯繫團隊開通權限：
+                            </p>
+                            <a href="mailto:marketdigit.lab@gmail.com" style="
+                                display: inline-block;
+                                background: #f1f1f1;
+                                color: #333;
+                                text-decoration: none;
+                                padding: 10px 15px;
+                                border-radius: 8px;
+                                font-weight: bold;
+                                font-size: 15px;
+                                border: 1px solid #ddd;
+                            ">
+                                ✉️ marketdigit.lab@gmail.com
+                            </a>
+                        </div>
+                    `;
+                    contentDiv.style.display = 'block';
+                    return; // 結束執行，不顯示下方的設定畫面
+                }
+                // ==========================================
 
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
@@ -394,3 +429,4 @@
     </script>
 </body>
 </html>
+
