@@ -308,7 +308,9 @@
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 let data = await res.json();
 
-                // ★★★ 修正核心：相容陣列與物件格式 ★★★
+                // ==========================================
+                // ★★★ 核心修正：相容陣列與物件格式 ★★★
+                // 因為 n8n 回傳的是陣列，這裡必須解開它！
                 if (Array.isArray(data)) {
                     data = data[0];
                 }
