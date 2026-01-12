@@ -6,18 +6,19 @@
     <title>攤位通知設定</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* --- 樣式區 --- */
+        /* --- 樣式區 (瘦身版) --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f0f2f5;
-            padding: 20px;
+            padding: 15px; /* 縮小邊距 */
             text-align: center;
             color: #333;
+            font-size: 14px; /* 全局字體縮小 */
         }
 
         .card {
             background: white;
-            padding: 30px;
+            padding: 20px; /* 縮小內距 */
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             max-width: 400px;
@@ -27,14 +28,15 @@
 
         h2 {
             color: #1DB446;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: 18px; /* 標題縮小 */
             text-align: center;
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             border-bottom: 1px dashed #eee;
-            padding-bottom: 20px;
+            padding-bottom: 15px;
         }
         
         .form-group:last-of-type {
@@ -43,21 +45,21 @@
 
         label {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-weight: 600;
             color: #444;
-            font-size: 1.1em;
+            font-size: 14px; /* 標籤文字縮小 */
         }
 
         .tag-container {
             border: 2px solid #eee;
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: 8px; /* 圓角縮小 */
+            padding: 8px;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 6px; /* 間距縮小 */
             background: #fff;
-            min-height: 50px;
+            min-height: 42px;
             cursor: text;
             transition: all 0.3s;
         }
@@ -67,7 +69,6 @@
             box-shadow: 0 0 0 2px rgba(29, 180, 70, 0.1);
         }
 
-        /* 滿額時的樣式 */
         .tag-container.full {
             background-color: #fafafa;
             border-color: #ddd;
@@ -80,9 +81,9 @@
         .tag {
             background-color: #e8f5e9;
             color: #1b5e20;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 15px;
+            padding: 4px 10px; /* Tag 變小 */
+            border-radius: 15px;
+            font-size: 13px; /* Tag 字體變小 */
             display: flex;
             align-items: center;
             animation: popIn 0.2s ease;
@@ -95,10 +96,10 @@
 
         .tag span {
             cursor: pointer;
-            margin-left: 8px;
+            margin-left: 6px;
             font-weight: bold;
             color: #81c784;
-            font-size: 18px;
+            font-size: 16px;
             line-height: 1;
             display: inline-block;
             padding: 0 4px;
@@ -112,24 +113,24 @@
             border: none;
             outline: none;
             flex-grow: 1;
-            padding: 5px;
-            font-size: 16px;
-            min-width: 120px;
+            padding: 4px;
+            font-size: 14px; /* 輸入框字體縮小 (注意：iPhone 上如果小於 16px 可能會自動放大畫面) */
+            min-width: 100px;
             color: #333;
         }
 
         button {
             width: 100%;
-            padding: 14px;
+            padding: 12px; /* 按鈕變扁一點 */
             background-color: #1DB446;
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 10px;
+            font-size: 15px; /* 按鈕字體縮小 */
             font-weight: bold;
             cursor: pointer;
             transition: background 0.3s;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         button:disabled {
@@ -141,36 +142,34 @@
             background-color: #169c3a;
         }
 
-        /* 使用者資訊區塊 */
         .user-badge-container {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
         }
 
         #userInfo {
             background: #e8f5e9;
             color: #2e7d32;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 13px; /* 用戶名縮小 */
             font-weight: bold;
         }
 
         #tierInfo {
             background: #fff3e0;
             color: #e65100;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 13px; /* 等級標籤縮小 */
             font-weight: bold;
             border: 1px solid #ffe0b2;
         }
         
-        /* God 等級特效 */
         .tier-god {
             background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%) !important;
             color: #fff !important;
@@ -179,8 +178,8 @@
         }
 
         #status {
-            margin-top: 15px;
-            font-size: 14px;
+            margin-top: 10px;
+            font-size: 13px;
             color: #666;
             text-align: center;
             min-height: 20px;
@@ -190,8 +189,8 @@
             border: 3px solid #f3f3f3;
             border-top: 3px solid #1DB446;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
@@ -203,7 +202,7 @@
 
         #loadingBlock {
             text-align: center;
-            padding: 40px 0;
+            padding: 30px 0;
         }
 
         #content {
@@ -213,14 +212,14 @@
         .hint-text {
             font-size: 12px; 
             color: #999; 
-            margin-top: 8px;
+            margin-top: 5px;
         }
 
         .limit-counter {
-            font-size: 13px;
+            font-size: 12px;
             color: #888;
             text-align: right;
-            margin-top: 6px;
+            margin-top: 4px;
             font-weight: 500;
         }
         .limit-counter.warning {
@@ -245,7 +244,7 @@
             </div>
 
             <div class="form-group">
-                <label>📍 【北區市場】關鍵字</label>
+                <label>📍 【北區市場】</label>
                 <div class="tag-container" id="northContainer" onclick="focusInput('north')">
                     <div id="northTagsWrapper" style="display:contents"></div>
                     <input type="text" id="northInput" placeholder="輸入後按 Enter..." autocomplete="off" enterkeyhint="enter">
@@ -254,7 +253,7 @@
             </div>
 
             <div class="form-group">
-                <label>📍 【中區市場】關鍵字</label>
+                <label>📍 【中區市場】</label>
                 <div class="tag-container" id="centralContainer" onclick="focusInput('central')">
                     <div id="centralTagsWrapper" style="display:contents"></div>
                     <input type="text" id="centralInput" placeholder="輸入後按 Enter..." autocomplete="off" enterkeyhint="enter">
@@ -334,10 +333,10 @@
                 
                 // ★ God 模式判斷：如果上限 > 50，顯示無限制並套用金光閃閃特效
                 if (userMaxLimit > 50) {
-                    tierEl.innerText = `🏆 ${tierName} (♾️ 無限制)`;
+                    tierEl.innerText = ` ${tierName} ( 無限制)`;
                     tierEl.classList.add('tier-god');
                 } else {
-                    tierEl.innerText = `🏆 ${tierName} (上限${userMaxLimit}個)`;
+                    tierEl.innerText = ` ${tierName} (上限${userMaxLimit}個)`;
                     tierEl.classList.remove('tier-god');
                 }
                 // ==========================================
@@ -368,9 +367,9 @@
             const contentDiv = document.getElementById('content');
             contentDiv.innerHTML = `
                 <div style="text-align: center; padding: 40px 20px;">
-                    <div style="font-size: 60px;">🔒</div>
-                    <h3 style="color: #555; margin: 20px 0;">無存取權限</h3>
-                    <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+                    <div style="font-size: 40px;">🔒</div>
+                    <h3 style="color: #555; margin: 15px 0;">無存取權限</h3>
+                    <p style="color: #666; line-height: 1.6; margin-bottom: 20px; font-size: 13px;">
                     系統找不到您的資料或已過期，<br>
                     請聯繫管理員處理。
                     </p>
