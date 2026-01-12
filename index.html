@@ -306,7 +306,13 @@
        async function fetchCurrentData(userId) {
             try {
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
-                const data = await res.json();
+                let data = await res.json();
+
+                // ★★★ 修正核心：相容陣列與物件格式 ★★★
+                if (Array.isArray(data)) {
+                    data = data[0];
+                }
+                // ==========================================
 
                 if (data.isUserFound === false) {
                     showNoAccess();
