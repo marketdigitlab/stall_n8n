@@ -31,10 +31,9 @@
             text-align: center;
         }
 
-        /* 標籤輸入區塊樣式 */
         .form-group {
             margin-bottom: 25px;
-            border-bottom: 1px dashed #eee; /* 區隔線 */
+            border-bottom: 1px dashed #eee;
             padding-bottom: 20px;
         }
         
@@ -66,6 +65,16 @@
         .tag-container:focus-within {
             border-color: #1DB446;
             box-shadow: 0 0 0 2px rgba(29, 180, 70, 0.1);
+        }
+
+        /* 滿額時的樣式 */
+        .tag-container.full {
+            background-color: #fafafa;
+            border-color: #ddd;
+            cursor: not-allowed;
+        }
+        .tag-container.full input {
+            display: none;
         }
 
         .tag {
@@ -132,15 +141,41 @@
             background-color: #169c3a;
         }
 
+        /* 使用者資訊區塊 */
+        .user-badge-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
         #userInfo {
             background: #e8f5e9;
             color: #2e7d32;
-            padding: 8px 15px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 14px;
             font-weight: bold;
-            display: inline-block;
-            margin-bottom: 20px;
+        }
+
+        #tierInfo {
+            background: #fff3e0;
+            color: #e65100;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid #ffe0b2;
+        }
+        
+        /* God 等級特效 */
+        .tier-god {
+            background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%) !important;
+            color: #fff !important;
+            border: none !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         #status {
@@ -180,6 +215,17 @@
             color: #999; 
             margin-top: 8px;
         }
+
+        .limit-counter {
+            font-size: 13px;
+            color: #888;
+            text-align: right;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+        .limit-counter.warning {
+            color: #d32f2f;
+        }
     </style>
 </head>
 <body>
@@ -193,25 +239,29 @@
         </div>
 
         <div id="content">
-            <div style="text-align:center;">
+            <div class="user-badge-container">
                 <div id="userInfo">Hi</div>
+                <div id="tierInfo">讀取等級...</div>
             </div>
 
             <div class="form-group">
-                <label>📍 【北區市場】您關注的攤位</label>
-                <div class="tag-container" onclick="document.getElementById('northInput').focus()">
+                <label>📍 【北區市場】關鍵字</label>
+                <div class="tag-container" id="northContainer" onclick="focusInput('north')">
                     <div id="northTagsWrapper" style="display:contents"></div>
-                    <input type="text" id="northInput" placeholder="輸入後按 Enter 新增..." autocomplete="off" enterkeyhint="enter">
+                    <input type="text" id="northInput" placeholder="輸入後按 Enter..." autocomplete="off" enterkeyhint="enter">
                 </div>
+                <div id="northCounter" class="limit-counter">--/--</div>
             </div>
 
             <div class="form-group">
-                <label>📍 【中區市場】您關注的攤位</label>
-                <div class="tag-container" onclick="document.getElementById('centralInput').focus()">
+                <label>📍 【中區市場】關鍵字</label>
+                <div class="tag-container" id="centralContainer" onclick="focusInput('central')">
                     <div id="centralTagsWrapper" style="display:contents"></div>
-                    <input type="text" id="centralInput" placeholder="輸入後按 Enter 新增..." autocomplete="off" enterkeyhint="enter">
+                    <input type="text" id="centralInput" placeholder="輸入後按 Enter..." autocomplete="off" enterkeyhint="enter">
                 </div>
-                <p class="hint-text">💡 輸入文字後按下 <b>Enter</b> 即可新增標籤，點擊 <b>×</b> 可刪除。</p>
+                <div id="centralCounter" class="limit-counter">--/--</div>
+                
+                <p class="hint-text">💡 輸入後按下 <b>Enter</b> 新增，點擊 <b>×</b> 刪除。</p>
             </div>
 
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
@@ -225,6 +275,8 @@
         const MY_LIFF_ID = "2008700928-mrYiKQ76";
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
+        
+        let userMaxLimit = 5; // 預設值 (會被後端覆蓋)
         // ==========================================
 
         let northTags = []; 
@@ -257,33 +309,28 @@
                 const data = await res.json();
 
                 if (data.isUserFound === false) {
-                    document.getElementById('loadingBlock').style.display = 'none';
-                    const contentDiv = document.getElementById('content');
-                    contentDiv.innerHTML = `
-                        <div style="text-align: center; padding: 40px 20px;">
-                            <div style="font-size: 60px;">🔒</div>
-                            <h3 style="color: #555; margin: 20px 0;">無存取權限</h3>
-                            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-                            系統找不到您的建檔資料，<br>
-                            請聯繫團隊開通權限：
-                            </p>
-                            <a href="mailto:marketdigit.lab@gmail.com" style="
-                                display: inline-block;
-                                background: #f1f1f1;
-                                color: #333;
-                                text-decoration: none;
-                                padding: 10px 15px;
-                                border-radius: 8px;
-                                font-weight: bold;
-                                font-size: 15px;
-                                border: 1px solid #ddd;
-                            ">
-                                ✉️ marketdigit.lab@gmail.com
-                            </a>
-                        </div>
-                    `;
-                    contentDiv.style.display = 'block';
-                    return; // 結束執行，不顯示下方的設定畫面
+                    showNoAccess();
+                    return;
+                }
+
+                // ==========================================
+                // ★★★ 1. 讀取等級與上限 ★★★
+                // ==========================================
+                if (data.tagLimit) {
+                    userMaxLimit = parseInt(data.tagLimit);
+                }
+
+                // 顯示等級名稱
+                const tierName = data.userTierName || "Basic";
+                const tierEl = document.getElementById('tierInfo');
+                
+                // ★ God 模式判斷：如果上限 > 50，顯示無限制並套用金光閃閃特效
+                if (userMaxLimit > 50) {
+                    tierEl.innerText = `🏆 ${tierName} (♾️ 無限制)`;
+                    tierEl.classList.add('tier-god');
+                } else {
+                    tierEl.innerText = `🏆 ${tierName} (上限${userMaxLimit}個)`;
+                    tierEl.classList.remove('tier-god');
                 }
                 // ==========================================
 
@@ -291,18 +338,37 @@
                 document.getElementById('content').style.display = 'block';
 
                 if (data.notionId) { currentUserNotionId = data.notionId; }
+                
+                // 相容舊欄位
                 if (data.northPreferences) { northTags = parseTags(data.northPreferences); }
                 else if (data.preferences) { northTags = parseTags(data.preferences); }
                 
                 if (data.centralPreferences) { centralTags = parseTags(data.centralPreferences); }
 
-                drawAllTags();
+                drawAllTags(); // 更新畫面與計數器
             } catch (err) {
                 console.error(err);
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
-                document.getElementById('status').innerText = "無法讀取舊資料，請直接輸入";
+                document.getElementById('status').innerText = "讀取資料時發生錯誤";
+                drawAllTags();
             }
+        }
+
+        function showNoAccess() {
+            document.getElementById('loadingBlock').style.display = 'none';
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 60px;">🔒</div>
+                    <h3 style="color: #555; margin: 20px 0;">無存取權限</h3>
+                    <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+                    系統找不到您的資料或已過期，<br>
+                    請聯繫管理員處理。
+                    </p>
+                </div>
+            `;
+            contentDiv.style.display = 'block';
         }
 
         function parseTags(str) {
@@ -313,35 +379,43 @@
         const northInput = document.getElementById('northInput');
         const centralInput = document.getElementById('centralInput');
 
-        // ==========================================
-        // ★★★ 修正2: 鍵盤 Enter 邏輯修正 ★★★
-        // ==========================================
-        
-        northInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // 1. 阻止跳去下一格的預設行為
-                addTag('north');
-                // 2. 強制把焦點抓回來，確保不跳走
-                northInput.focus(); 
-            }
-        });
-        northInput.addEventListener('blur', function () { addTag('north'); });
+        // 綁定輸入事件 (修正 Enter 鍵)
+        northInput.addEventListener('keydown', (e) => handleInput(e, 'north'));
+        northInput.addEventListener('blur', () => addTag('north'));
 
-        centralInput.addEventListener('keydown', function (e) {
+        centralInput.addEventListener('keydown', (e) => handleInput(e, 'central'));
+        centralInput.addEventListener('blur', () => addTag('central'));
+
+        function handleInput(e, type) {
             if (e.key === 'Enter') {
-                e.preventDefault(); // 1. 阻止跳去下一格
-                addTag('central');
-                // 2. 強制把焦點抓回來
-                centralInput.focus();
+                e.preventDefault();
+                addTag(type);
+                // 只有沒滿的時候才抓回焦點，滿了就讓它收起鍵盤
+                const targetArray = type === 'north' ? northTags : centralTags;
+                if (targetArray.length < userMaxLimit) {
+                    document.getElementById(type + 'Input').focus();
+                }
             }
-        });
-        centralInput.addEventListener('blur', function () { addTag('central'); });
-        // ==========================================
+        }
+
+        function focusInput(type) {
+            const targetArray = type === 'north' ? northTags : centralTags;
+            // 只有未滿時才允許點擊聚焦
+            if (targetArray.length < userMaxLimit) {
+                document.getElementById(type + 'Input').focus();
+            }
+        }
 
         function addTag(type) {
-            const inputEl = type === 'north' ? northInput : centralInput;
+            const inputEl = document.getElementById(type + 'Input');
             const targetArray = type === 'north' ? northTags : centralTags;
             const val = inputEl.value.trim();
+
+            // ★★★ 2. 阻擋超過上限 ★★★
+            if (targetArray.length >= userMaxLimit) {
+                inputEl.value = ''; 
+                return;
+            }
 
             if (val && !targetArray.includes(val)) {
                 targetArray.push(val);
@@ -359,6 +433,9 @@
         function drawAllTags() {
             renderTagsToDiv(northTags, 'northTagsWrapper', 'north');
             renderTagsToDiv(centralTags, 'centralTagsWrapper', 'central');
+            
+            updateCounter('north', northTags.length);
+            updateCounter('central', centralTags.length);
         }
 
         function renderTagsToDiv(tags, wrapperId, type) {
@@ -370,6 +447,31 @@
                 div.innerHTML = `${escapeHtml(t)} <span onclick="removeTag('${type}', ${i})">×</span>`;
                 wrap.appendChild(div);
             });
+        }
+
+        // ★★★ 3. 更新計數器顯示 ★★★
+        function updateCounter(type, currentCount) {
+            const counterEl = document.getElementById(type + 'Counter');
+            const containerEl = document.getElementById(type + 'Container');
+            
+            // 如果是 God (上限很大)，就不顯示分母，顯示 "已設定 X 個" 即可，比較美觀
+            if (userMaxLimit > 50) {
+                counterEl.innerText = `目前已設定: ${currentCount} 個`;
+                counterEl.classList.remove('warning');
+                containerEl.classList.remove('full');
+            } else {
+                // 一般等級：顯示 3/5
+                counterEl.innerText = `${currentCount} / ${userMaxLimit}`;
+                
+                if (currentCount >= userMaxLimit) {
+                    counterEl.classList.add('warning');
+                    containerEl.classList.add('full');
+                    counterEl.innerText = `已達上限 (${currentCount}/${userMaxLimit})`;
+                } else {
+                    counterEl.classList.remove('warning');
+                    containerEl.classList.remove('full');
+                }
+            }
         }
 
         function escapeHtml(text) {
@@ -425,6 +527,3 @@
     </script>
 </body>
 </html>
-
-
-
