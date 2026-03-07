@@ -6,7 +6,6 @@
     <title>攤位通知設定</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* --- 樣式區 (瘦身版) --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f0f2f5;
@@ -275,7 +274,8 @@
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         
-        let userMaxLimit = 5; // 預設值 (會被後端覆蓋)
+        let userMaxLimit = 5; // 預設值
+        let isTrial = false;  // ★ 新增：判斷是否為體驗版用戶
         // ==========================================
 
         let northTags = []; 
@@ -307,50 +307,47 @@
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 let data = await res.json();
 
-                // ==========================================
-                // ★★★ 核心修正：相容陣列與物件格式 ★★★
-                // 因為 n8n 回傳的是陣列，這裡必須解開它！
                 if (Array.isArray(data)) {
                     data = data[0];
                 }
+
                 // ==========================================
+                // ★★★ 核心修改 1：不阻擋 false，而是轉為體驗版模式 ★★★
+                // ==========================================
+                const tierEl = document.getElementById('tierInfo');
 
                 if (data.isUserFound === false) {
-                    showNoAccess();
-                    return;
-                }
-
-                // ==========================================
-                // ★★★ 1. 讀取等級與上限 ★★★
-                // ==========================================
-                if (data.tagLimit) {
-                    userMaxLimit = parseInt(data.tagLimit);
-                }
-
-                // 顯示等級名稱
-                const tierName = data.userTierName || "Basic";
-                const tierEl = document.getElementById('tierInfo');
-                
-                // ★ God 模式判斷：如果上限 > 50，顯示無限制並套用金光閃閃特效
-                if (userMaxLimit > 50) {
-                    tierEl.innerText = ` ${tierName} ( 無限制)`;
-                    tierEl.classList.add('tier-god');
-                } else {
-                    tierEl.innerText = ` ${tierName} (上限${userMaxLimit}個)`;
+                    // 查無此人 -> 體驗版模式
+                    isTrial = true;
+                    userMaxLimit = 3; // 體驗版總上限 3 個
+                    tierEl.innerText = ` 體驗版 (總上限 3 個)`;
                     tierEl.classList.remove('tier-god');
+                } else {
+                    // 舊客/正式會員模式
+                    isTrial = false;
+                    if (data.tagLimit) {
+                        userMaxLimit = parseInt(data.tagLimit);
+                    }
+                    const tierName = data.userTierName || "Basic";
+                    
+                    if (userMaxLimit > 50) {
+                        tierEl.innerText = ` ${tierName} ( 無限制)`;
+                        tierEl.classList.add('tier-god');
+                    } else {
+                        tierEl.innerText = ` ${tierName} (上限${userMaxLimit}個)`;
+                        tierEl.classList.remove('tier-god');
+                    }
+                    
+                    if (data.notionId) { currentUserNotionId = data.notionId; }
+                    
+                    if (data.northPreferences) { northTags = parseTags(data.northPreferences); }
+                    else if (data.preferences) { northTags = parseTags(data.preferences); }
+                    
+                    if (data.centralPreferences) { centralTags = parseTags(data.centralPreferences); }
                 }
-                // ==========================================
 
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
-
-                if (data.notionId) { currentUserNotionId = data.notionId; }
-                
-                // 相容舊欄位
-                if (data.northPreferences) { northTags = parseTags(data.northPreferences); }
-                else if (data.preferences) { northTags = parseTags(data.preferences); }
-                
-                if (data.centralPreferences) { centralTags = parseTags(data.centralPreferences); }
 
                 drawAllTags(); // 更新畫面與計數器
             } catch (err) {
@@ -362,22 +359,6 @@
             }
         }
 
-        function showNoAccess() {
-            document.getElementById('loadingBlock').style.display = 'none';
-            const contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = `
-                <div style="text-align: center; padding: 40px 20px;">
-                    <div style="font-size: 40px;">🔒</div>
-                    <h3 style="color: #555; margin: 15px 0;">無存取權限</h3>
-                    <p style="color: #666; line-height: 1.6; margin-bottom: 20px; font-size: 13px;">
-                    系統找不到您的資料或已過期，<br>
-                    請聯繫管理員處理。
-                    </p>
-                </div>
-            `;
-            contentDiv.style.display = 'block';
-        }
-
         function parseTags(str) {
             if(!str) return [];
             return str.split(/[,、]/).map(t => t.trim()).filter(t => t !== "");
@@ -386,7 +367,6 @@
         const northInput = document.getElementById('northInput');
         const centralInput = document.getElementById('centralInput');
 
-        // 綁定輸入事件 (修正 Enter 鍵)
         northInput.addEventListener('keydown', (e) => handleInput(e, 'north'));
         northInput.addEventListener('blur', () => addTag('north'));
 
@@ -397,9 +377,20 @@
             if (e.key === 'Enter') {
                 e.preventDefault();
                 addTag(type);
-                // 只有沒滿的時候才抓回焦點，滿了就讓它收起鍵盤
+                
+                // ★★★ 核心修改 2：判斷是否還能繼續輸入 ★★★
                 const targetArray = type === 'north' ? northTags : centralTags;
-                if (targetArray.length < userMaxLimit) {
+                let canAdd = false;
+                
+                if (isTrial) {
+                    // 體驗版：看「兩個社團的總和」
+                    canAdd = (northTags.length + centralTags.length) < userMaxLimit;
+                } else {
+                    // 正式版：看「單一社團」
+                    canAdd = targetArray.length < userMaxLimit;
+                }
+
+                if (canAdd) {
                     document.getElementById(type + 'Input').focus();
                 }
             }
@@ -407,8 +398,15 @@
 
         function focusInput(type) {
             const targetArray = type === 'north' ? northTags : centralTags;
-            // 只有未滿時才允許點擊聚焦
-            if (targetArray.length < userMaxLimit) {
+            let canAdd = false;
+            
+            if (isTrial) {
+                canAdd = (northTags.length + centralTags.length) < userMaxLimit;
+            } else {
+                canAdd = targetArray.length < userMaxLimit;
+            }
+
+            if (canAdd) {
                 document.getElementById(type + 'Input').focus();
             }
         }
@@ -418,13 +416,22 @@
             const targetArray = type === 'north' ? northTags : centralTags;
             const val = inputEl.value.trim();
 
-            // ★★★ 2. 阻擋超過上限 ★★★
-            if (targetArray.length >= userMaxLimit) {
-                inputEl.value = ''; 
-                return;
+            if (!val) return;
+
+            // ★★★ 核心修改 3：新增標籤時的阻擋邏輯 ★★★
+            if (isTrial) {
+                if (northTags.length + centralTags.length >= userMaxLimit) {
+                    inputEl.value = ''; 
+                    return;
+                }
+            } else {
+                if (targetArray.length >= userMaxLimit) {
+                    inputEl.value = ''; 
+                    return;
+                }
             }
 
-            if (val && !targetArray.includes(val)) {
+            if (!targetArray.includes(val)) {
                 targetArray.push(val);
                 drawAllTags();
             }
@@ -456,27 +463,41 @@
             });
         }
 
-        // ★★★ 3. 更新計數器顯示 ★★★
+        // ★★★ 核心修改 4：顯示文字改成「總額度」 ★★★
         function updateCounter(type, currentCount) {
             const counterEl = document.getElementById(type + 'Counter');
             const containerEl = document.getElementById(type + 'Container');
             
-            // 如果是 God (上限很大)，就不顯示分母，顯示 "已設定 X 個" 即可，比較美觀
-            if (userMaxLimit > 50) {
-                counterEl.innerText = `目前已設定: ${currentCount} 個`;
-                counterEl.classList.remove('warning');
-                containerEl.classList.remove('full');
-            } else {
-                // 一般等級：顯示 3/5
-                counterEl.innerText = `${currentCount} / ${userMaxLimit}`;
+            if (isTrial) {
+                // 體驗版：顯示全域總和
+                const totalCount = northTags.length + centralTags.length;
                 
-                if (currentCount >= userMaxLimit) {
+                if (totalCount >= userMaxLimit) {
+                    counterEl.innerText = `總額度已滿 (${totalCount}/${userMaxLimit})`;
                     counterEl.classList.add('warning');
                     containerEl.classList.add('full');
-                    counterEl.innerText = `已達上限 (${currentCount}/${userMaxLimit})`;
                 } else {
+                    counterEl.innerText = `體驗版總額度: ${totalCount} / ${userMaxLimit}`;
                     counterEl.classList.remove('warning');
                     containerEl.classList.remove('full');
+                }
+            } else {
+                // 正式版：原本的邏輯
+                if (userMaxLimit > 50) {
+                    counterEl.innerText = `目前已設定: ${currentCount} 個`;
+                    counterEl.classList.remove('warning');
+                    containerEl.classList.remove('full');
+                } else {
+                    counterEl.innerText = `${currentCount} / ${userMaxLimit}`;
+                    
+                    if (currentCount >= userMaxLimit) {
+                        counterEl.classList.add('warning');
+                        containerEl.classList.add('full');
+                        counterEl.innerText = `已達上限 (${currentCount}/${userMaxLimit})`;
+                    } else {
+                        counterEl.classList.remove('warning');
+                        containerEl.classList.remove('full');
+                    }
                 }
             }
         }
@@ -507,9 +528,12 @@
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         userId: window.currentUser.userId,
+                        // 如果是體驗版，可以把 displayName 傳回後端建檔用
+                        userName: window.currentUser.displayName,
                         northPreferences: northString,
                         centralPreferences: centralString,
-                        notionId: currentUserNotionId 
+                        notionId: currentUserNotionId,
+                        isTrial: isTrial // 告訴後端這是體驗版用戶的新增
                     })
                 });
 
@@ -518,9 +542,16 @@
                     status.style.color = "#1DB446";
                     btn.disabled = false;
                     btn.innerText = "儲存設定";
-                    setTimeout(() => { 
-                        if(status.innerText.includes("✅")) status.innerText = ""; 
-                    }, 3000);
+                    
+                    // 儲存成功後，體驗版用戶其實就變成正式寫入資料庫了
+                    // 為了避免再次觸發新建，把 isTrial 狀態解除 (或重新整理網頁)
+                    if (isTrial) {
+                        setTimeout(() => { location.reload(); }, 1500);
+                    } else {
+                        setTimeout(() => { 
+                            if(status.innerText.includes("✅")) status.innerText = ""; 
+                        }, 3000);
+                    }
                 } else {
                     throw new Error("伺服器錯誤");
                 }
@@ -534,4 +565,5 @@
     </script>
 </body>
 </html>
+
 
