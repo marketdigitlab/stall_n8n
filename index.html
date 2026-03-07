@@ -199,6 +199,7 @@
             const status = document.getElementById('status');
             btn.disabled = true;
             btn.innerText = "儲存中...";
+            status.innerText = "";
 
             try {
                 const payload = {
@@ -220,7 +221,10 @@
                 if (res.ok) {
                     status.innerText = "✅ 設定已更新！";
                     status.style.color = "#1DB446";
-                    setTimeout(() => location.reload(), 1500);
+                    btn.disabled = false;
+                    btn.innerText = "儲存設定";
+                    // ★ 移除 location.reload()，改為 3 秒後清除成功文字
+                    setTimeout(() => { status.innerText = ""; }, 3000);
                 } else {
                     throw new Error("儲存失敗");
                 }
