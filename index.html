@@ -38,7 +38,7 @@
                 <div id="tierInfo">讀取中...</div>
             </div>
             <div id="dynamicGroups"></div>
-            <p class="hint">💡 輸入後按 Enter 新增，點擊 × 刪除。</p>
+            <p class="hint">💡 輸入後按 Enter 或點擊空白處新增，點擊 × 刪除。</p>
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
             <div id="status"></div>
         </div>
@@ -51,7 +51,7 @@
         
         let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [] };
         let userTags = {}; 
-        let currentUser = null; // ★ 確保變數名稱統一
+        let currentUser = null;
 
         window.onload = initializeLiff;
 
@@ -60,7 +60,7 @@
                 await liff.init({ liffId: MY_LIFF_ID });
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 const profile = await liff.getProfile();
-                currentUser = profile; // ★ 參考舊版賦值方式
+                currentUser = profile;
                 document.getElementById('userInfo').innerText = "Hi, " + profile.displayName;
                 await fetchCurrentData(profile.userId);
             } catch (err) { 
@@ -93,64 +93,65 @@
         }
 
         function renderDynamicGroups() {
-        const container = document.getElementById('dynamicGroups');
-        container.innerHTML = '';
-        const usedGroups = Object.keys(userTags).filter(name => userTags[name].length > 0);
-        const usedCount = usedGroups.length;
-    
-        config.groupList.forEach(groupName => {
-            const hasTags = userTags[groupName].length > 0;
-            const isDisabled = !hasTags && usedCount >= config.groupLimit;
-            const safeId = groupName.replace(/\s+/g,'_');
-    
-            const groupDiv = document.createElement('div');
-            groupDiv.className = `form-group ${isDisabled ? 'disabled' : ''}`;
-            groupDiv.innerHTML = `
-                <label>📍 【${groupName}】</label>
-                <div class="tag-container" id="cont_${safeId}" onclick="if(!${isDisabled}) document.getElementById('input_${safeId}').focus()">
-                    <div id="wrap_${safeId}" style="display:contents"></div>
-                    <input type="text" id="input_${safeId}" placeholder="${isDisabled ? '等級權限不足' : '輸入關鍵字...'}" ${isDisabled ? 'disabled' : ''} autocomplete="off">
-                </div>
-                <div id="count_${safeId}" class="limit-counter"></div>
-            `;
-            container.appendChild(groupDiv);
-    
-            const input = document.getElementById(`input_${safeId}`);
-            
-            // ★ 修改點：拿掉 blur 事件，只保留 Enter 新增，防止打字中途刷新
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
+            const container = document.getElementById('dynamicGroups');
+            container.innerHTML = '';
+            const usedGroups = Object.keys(userTags).filter(name => userTags[name].length > 0);
+            const usedCount = usedGroups.length;
+        
+            config.groupList.forEach(groupName => {
+                const hasTags = userTags[groupName].length > 0;
+                const isDisabled = !hasTags && usedCount >= config.groupLimit;
+                const safeId = groupName.replace(/\s+/g,'_');
+        
+                const groupDiv = document.createElement('div');
+                groupDiv.className = `form-group ${isDisabled ? 'disabled' : ''}`;
+                groupDiv.innerHTML = `
+                    <label>📍 【${groupName}】</label>
+                    <div class="tag-container" id="cont_${safeId}" onclick="if(!${isDisabled}) document.getElementById('input_${safeId}').focus()">
+                        <div id="wrap_${safeId}" style="display:contents"></div>
+                        <input type="text" id="input_${safeId}" placeholder="${isDisabled ? '等級權限不足' : '輸入後按 Enter...'}" ${isDisabled ? 'disabled' : ''} autocomplete="off">
+                    </div>
+                    <div id="count_${safeId}" class="limit-counter"></div>
+                `;
+                container.appendChild(groupDiv);
+        
+                const input = document.getElementById(`input_${safeId}`);
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (input.value.trim()) {
+                            addTag(groupName, input.value);
+                            input.value = ''; 
+                        }
+                    }
+                });
+
+                // ★ 還原舊版：支援 Blur 自動加入標籤
+                input.addEventListener('blur', () => {
                     if (input.value.trim()) {
                         addTag(groupName, input.value);
-                        input.value = ''; // 新增後清空輸入框
+                        input.value = '';
                     }
-                }
+                });
+
+                renderTags(groupName);
             });
-            renderTags(groupName);
-        });
-    }    
+        }    
 
         function addTag(groupName, val) {
             val = val.trim();
             if (!val) return;
-        
-            // 檢查單社團上限
-            if (userTags[groupName].length >= config.tagLimit) {
-                return; 
-            }
-        
-            // 檢查是否重複
+            if (userTags[groupName].length >= config.tagLimit) return; 
             if (!userTags[groupName].includes(val)) {
                 userTags[groupName].push(val);
-                // 只有確定加入後，才觸發 UI 刷新
                 renderDynamicGroups();
-                
-                // 增加一個小動作：自動聚焦回剛才的輸入框，方便連續輸入
+                // 恢復焦點方便連續輸入
                 const nextInput = document.getElementById(`input_${groupName.replace(/\s+/g,'_')}`);
                 if (nextInput) nextInput.focus();
             }
         }
+
         function removeTag(groupName, index) {
             userTags[groupName].splice(index, 1);
             renderDynamicGroups();
@@ -160,6 +161,7 @@
             const safeId = groupName.replace(/\s+/g,'_');
             const wrap = document.getElementById(`wrap_${safeId}`);
             const counter = document.getElementById(`count_${safeId}`);
+            if (!wrap) return;
             wrap.innerHTML = '';
             userTags[groupName].forEach((t, i) => {
                 const tag = document.createElement('div');
@@ -175,7 +177,19 @@
         }
 
         async function submitData() {
-            // ★ 安全檢查：確保 currentUser 已被賦值
+            // ★ 防呆：儲存前強制檢查所有輸入框內的「殘留文字」
+            config.groupList.forEach(groupName => {
+                const safeId = groupName.replace(/\s+/g,'_');
+                const input = document.getElementById(`input_${safeId}`);
+                if (input && input.value.trim()) {
+                    const val = input.value.trim();
+                    if (!userTags[groupName].includes(val) && userTags[groupName].length < config.tagLimit) {
+                        userTags[groupName].push(val);
+                    }
+                    input.value = '';
+                }
+            });
+
             if (!currentUser || !currentUser.userId) {
                 alert("尚未取得身分資訊，請重新整理頁面。");
                 return;
@@ -219,4 +233,3 @@
     </script>
 </body>
 </html>
-
