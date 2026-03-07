@@ -10,26 +10,19 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; text-align: left; }
         h2 { color: #1DB446; margin-bottom: 15px; font-size: 18px; text-align: center; }
         .form-group { margin-bottom: 20px; border-bottom: 1px dashed #eee; padding-bottom: 15px; transition: all 0.3s; }
-        
-        /* 禁用狀態：變灰、半透明、禁止點擊 */
         .form-group.disabled { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
-        
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
         .tag-container { border: 2px solid #eee; border-radius: 8px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; background: #fff; min-height: 42px; cursor: text; }
         .tag-container:focus-within { border-color: #1DB446; }
         .tag { background-color: #e8f5e9; color: #1b5e20; padding: 4px 10px; border-radius: 15px; font-size: 13px; display: flex; align-items: center; }
         .tag span { cursor: pointer; margin-left: 6px; font-weight: bold; color: #81c784; padding: 0 4px; }
         input[type="text"] { border: none; outline: none; flex-grow: 1; padding: 4px; font-size: 14px; min-width: 100px; }
-        
         button { width: 100%; padding: 12px; background-color: #1DB446; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         button:disabled { background-color: #ccc; }
-        
         .user-badge-container { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; }
         #userInfo { background: #e8f5e9; color: #2e7d32; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; }
         #tierInfo { background: #fff3e0; color: #e65100; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; border: 1px solid #ffe0b2; }
-        
         .limit-counter { font-size: 11px; color: #999; text-align: right; margin-top: 4px; }
-        #status { margin-top: 10px; font-size: 13px; text-align: center; min-height: 20px; }
         #loadingBlock { text-align: center; padding: 30px 0; }
         #content { display: none; }
         .hint { font-size: 11px; color: #aaa; margin-top: 10px; text-align: center; }
@@ -57,7 +50,8 @@
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         
         let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [] };
-        let userTags = {}; // 存放各社團標籤
+        let userTags = {}; 
+        let currentUser = null; // ★ 確保變數名稱統一
 
         window.onload = initializeLiff;
 
@@ -66,9 +60,12 @@
                 await liff.init({ liffId: MY_LIFF_ID });
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 const profile = await liff.getProfile();
+                currentUser = profile; // ★ 參考舊版賦值方式
                 document.getElementById('userInfo').innerText = "Hi, " + profile.displayName;
                 await fetchCurrentData(profile.userId);
-            } catch (err) { document.getElementById('loadingBlock').innerHTML = "初始化失敗"; }
+            } catch (err) { 
+                document.getElementById('loadingBlock').innerHTML = "初始化失敗: " + err.message; 
+            }
         }
 
         async function fetchCurrentData(userId) {
@@ -82,7 +79,6 @@
                 config.isTrial = (data.isUserFound === false);
                 config.groupList = data.groupList || [];
 
-                // 初始化標籤資料 (對應 NocoDB 欄位名)
                 config.groupList.forEach(name => {
                     userTags[name] = data.preferences[name] ? data.preferences[name].split(/[,、]/).map(t=>t.trim()).filter(t=>t) : [];
                 });
@@ -91,39 +87,35 @@
                 renderDynamicGroups();
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
-            } catch (err) { document.getElementById('status').innerText = "讀取失敗"; }
+            } catch (err) { 
+                document.getElementById('status').innerText = "讀取失敗"; 
+            }
         }
 
         function renderDynamicGroups() {
             const container = document.getElementById('dynamicGroups');
             container.innerHTML = '';
-            
-            // 核心邏輯：計算目前「已經有標籤」的社團數量
             const usedGroups = Object.keys(userTags).filter(name => userTags[name].length > 0);
             const usedCount = usedGroups.length;
 
             config.groupList.forEach(groupName => {
                 const hasTags = userTags[groupName].length > 0;
-                // 禁用條件：
-                // 1. 本社團目前沒標籤
-                // 2. 且已使用的社團數量已達到上限
                 const isDisabled = !hasTags && usedCount >= config.groupLimit;
+                const safeId = groupName.replace(/\s+/g,'_');
 
                 const groupDiv = document.createElement('div');
                 groupDiv.className = `form-group ${isDisabled ? 'disabled' : ''}`;
                 groupDiv.innerHTML = `
                     <label>📍 【${groupName}】</label>
-                    <div class="tag-container" onclick="if(!${isDisabled}) document.getElementById('input_${groupName.replace(/\s+/g,'_')}').focus()">
-                        <div id="wrap_${groupName.replace(/\s+/g,'_')}" style="display:contents"></div>
-                        <input type="text" id="input_${groupName.replace(/\s+/g,'_')}" 
-                               placeholder="${isDisabled ? '等級權限不足' : '輸入關鍵字...'}" 
-                               ${isDisabled ? 'disabled' : ''} autocomplete="off">
+                    <div class="tag-container" id="cont_${safeId}" onclick="if(!${isDisabled}) document.getElementById('input_${safeId}').focus()">
+                        <div id="wrap_${safeId}" style="display:contents"></div>
+                        <input type="text" id="input_${safeId}" placeholder="${isDisabled ? '等級權限不足' : '輸入關鍵字...'}" ${isDisabled ? 'disabled' : ''} autocomplete="off">
                     </div>
-                    <div id="count_${groupName.replace(/\s+/g,'_')}" class="limit-counter"></div>
+                    <div id="count_${safeId}" class="limit-counter"></div>
                 `;
                 container.appendChild(groupDiv);
 
-                const input = document.getElementById(`input_${groupName.replace(/\s+/g,'_')}`);
+                const input = document.getElementById(`input_${safeId}`);
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -137,24 +129,16 @@
 
         function addTag(groupName, val) {
             val = val.trim();
-            if (!val) return;
-
-            // 檢查「單一社團」上限
-            if (userTags[groupName].length >= config.tagLimit) {
-                alert(`此社團最多只能設定 ${config.tagLimit} 個關鍵字喔！`);
-                return;
-            }
-
+            if (!val || userTags[groupName].length >= config.tagLimit) return;
             if (!userTags[groupName].includes(val)) {
                 userTags[groupName].push(val);
-                // 每次新增標籤都要重新渲染，因為可能觸發其他社團的鎖定
                 renderDynamicGroups();
             }
         }
 
         function removeTag(groupName, index) {
             userTags[groupName].splice(index, 1);
-            renderDynamicGroups(); // 刪除標籤後，可能解鎖其他社團
+            renderDynamicGroups();
         }
 
         function renderTags(groupName) {
@@ -162,14 +146,12 @@
             const wrap = document.getElementById(`wrap_${safeId}`);
             const counter = document.getElementById(`count_${safeId}`);
             wrap.innerHTML = '';
-            
             userTags[groupName].forEach((t, i) => {
                 const tag = document.createElement('div');
                 tag.className = 'tag';
                 tag.innerHTML = `${escapeHtml(t)} <span onclick="removeTag('${groupName}', ${i})">×</span>`;
                 wrap.appendChild(tag);
             });
-
             counter.innerText = `已使用: ${userTags[groupName].length} / ${config.tagLimit}`;
         }
 
@@ -178,6 +160,12 @@
         }
 
         async function submitData() {
+            // ★ 安全檢查：確保 currentUser 已被賦值
+            if (!currentUser || !currentUser.userId) {
+                alert("尚未取得身分資訊，請重新整理頁面。");
+                return;
+            }
+
             const btn = document.getElementById('saveBtn');
             const status = document.getElementById('status');
             btn.disabled = true;
@@ -185,12 +173,11 @@
 
             try {
                 const payload = {
-                    userId: window.currentUser.userId,
-                    userName: window.currentUser.displayName,
+                    userId: currentUser.userId,
+                    userName: currentUser.displayName,
                     isTrial: config.isTrial
                 };
                 
-                // 動態組裝所有社團的字串回傳
                 Object.keys(userTags).forEach(name => {
                     payload[name] = userTags[name].join(', ');
                 });
@@ -206,11 +193,10 @@
                     status.style.color = "#1DB446";
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    throw new Error("伺服器連線失敗");
+                    throw new Error("儲存失敗");
                 }
             } catch (err) {
                 status.innerText = "❌ 失敗: " + err.message;
-                status.style.color = "red";
                 btn.disabled = false;
                 btn.innerText = "儲存設定";
             }
