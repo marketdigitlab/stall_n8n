@@ -6,564 +6,198 @@
     <title>攤位通知設定</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f0f2f5;
-            padding: 15px; /* 縮小邊距 */
-            text-align: center;
-            color: #333;
-            font-size: 14px; /* 全局字體縮小 */
-        }
-
-        .card {
-            background: white;
-            padding: 20px; /* 縮小內距 */
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            max-width: 400px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        h2 {
-            color: #1DB446;
-            margin-bottom: 15px;
-            font-size: 18px; /* 標題縮小 */
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            border-bottom: 1px dashed #eee;
-            padding-bottom: 15px;
-        }
-        
-        .form-group:last-of-type {
-            border-bottom: none;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #444;
-            font-size: 14px; /* 標籤文字縮小 */
-        }
-
-        .tag-container {
-            border: 2px solid #eee;
-            border-radius: 8px; /* 圓角縮小 */
-            padding: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px; /* 間距縮小 */
-            background: #fff;
-            min-height: 42px;
-            cursor: text;
-            transition: all 0.3s;
-        }
-
-        .tag-container:focus-within {
-            border-color: #1DB446;
-            box-shadow: 0 0 0 2px rgba(29, 180, 70, 0.1);
-        }
-
-        .tag-container.full {
-            background-color: #fafafa;
-            border-color: #ddd;
-            cursor: not-allowed;
-        }
-        .tag-container.full input {
-            display: none;
-        }
-
-        .tag {
-            background-color: #e8f5e9;
-            color: #1b5e20;
-            padding: 4px 10px; /* Tag 變小 */
-            border-radius: 15px;
-            font-size: 13px; /* Tag 字體變小 */
-            display: flex;
-            align-items: center;
-            animation: popIn 0.2s ease;
-        }
-
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .tag span {
-            cursor: pointer;
-            margin-left: 6px;
-            font-weight: bold;
-            color: #81c784;
-            font-size: 16px;
-            line-height: 1;
-            display: inline-block;
-            padding: 0 4px;
-        }
-
-        .tag span:hover {
-            color: #d32f2f;
-        }
-
-        input[type="text"] {
-            border: none;
-            outline: none;
-            flex-grow: 1;
-            padding: 4px;
-            font-size: 14px; /* 輸入框字體縮小 (注意：iPhone 上如果小於 16px 可能會自動放大畫面) */
-            min-width: 100px;
-            color: #333;
-        }
-
-        button {
-            width: 100%;
-            padding: 12px; /* 按鈕變扁一點 */
-            background-color: #1DB446;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 15px; /* 按鈕字體縮小 */
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 5px;
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        button:hover:not(:disabled) {
-            background-color: #169c3a;
-        }
-
-        .user-badge-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        #userInfo {
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 13px; /* 用戶名縮小 */
-            font-weight: bold;
-        }
-
-        #tierInfo {
-            background: #fff3e0;
-            color: #e65100;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 13px; /* 等級標籤縮小 */
-            font-weight: bold;
-            border: 1px solid #ffe0b2;
-        }
-        
-        .tier-god {
-            background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%) !important;
-            color: #fff !important;
-            border: none !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        #status {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #666;
-            text-align: center;
-            min-height: 20px;
-        }
-
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #1DB446;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        #loadingBlock {
-            text-align: center;
-            padding: 30px 0;
-        }
-
-        #content {
-            display: none;
-        }
-        
-        .hint-text {
-            font-size: 12px; 
-            color: #999; 
-            margin-top: 5px;
-        }
-
-        .limit-counter {
-            font-size: 12px;
-            color: #888;
-            text-align: right;
-            margin-top: 4px;
-            font-weight: 500;
-        }
-        .limit-counter.warning {
-            color: #d32f2f;
-        }
+        /* 樣式保持原有的精簡風格，並增加禁用狀態樣式 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; padding: 15px; text-align: center; color: #333; font-size: 14px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; text-align: left; }
+        h2 { color: #1DB446; margin-bottom: 15px; font-size: 18px; text-align: center; }
+        .form-group { margin-bottom: 20px; border-bottom: 1px dashed #eee; padding-bottom: 15px; transition: opacity 0.3s; }
+        .form-group.disabled { opacity: 0.5; pointer-events: none; }
+        .form-group.disabled .limit-counter { color: #d32f2f; font-weight: bold; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        .tag-container { border: 2px solid #eee; border-radius: 8px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; background: #fff; min-height: 42px; cursor: text; }
+        .tag-container:focus-within { border-color: #1DB446; }
+        .tag { background-color: #e8f5e9; color: #1b5e20; padding: 4px 10px; border-radius: 15px; font-size: 13px; display: flex; align-items: center; }
+        .tag span { cursor: pointer; margin-left: 6px; font-weight: bold; color: #81c784; }
+        input[type="text"] { border: none; outline: none; flex-grow: 1; padding: 4px; font-size: 14px; min-width: 100px; }
+        button { width: 100%; padding: 12px; background-color: #1DB446; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        button:disabled { background-color: #ccc; }
+        .user-badge-container { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; }
+        #userInfo { background: #e8f5e9; color: #2e7d32; padding: 5px 12px; border-radius: 15px; font-size: 13px; font-weight: bold; }
+        #tierInfo { background: #fff3e0; color: #e65100; padding: 5px 12px; border-radius: 15px; font-size: 13px; font-weight: bold; border: 1px solid #ffe0b2; }
+        .limit-counter { font-size: 12px; color: #888; text-align: right; margin-top: 4px; }
+        #loadingBlock { text-align: center; padding: 30px 0; }
+        #content { display: none; }
     </style>
 </head>
 <body>
-
     <div class="card">
         <h2>⚙️ 攤位通知設定</h2>
-
-        <div id="loadingBlock">
-            <div class="loader"></div>
-            <p style="color:#666; font-size:14px;">正在讀取您的設定...</p>
-        </div>
-
+        <div id="loadingBlock"><p>正在讀取設定...</p></div>
         <div id="content">
             <div class="user-badge-container">
                 <div id="userInfo">Hi</div>
-                <div id="tierInfo">讀取等級...</div>
+                <div id="tierInfo">讀取中...</div>
             </div>
-
-            <div class="form-group">
-                <label>📍 【移動大聯盟】</label>
-                <div class="tag-container" id="northContainer" onclick="focusInput('north')">
-                    <div id="northTagsWrapper" style="display:contents"></div>
-                    <input type="text" id="northInput" placeholder="輸入後按 Enter..." autocomplete="off" enterkeyhint="enter">
-                </div>
-                <div id="northCounter" class="limit-counter">--/--</div>
-            </div>
-
-            <div class="form-group">
-                <label>📍 【黃金地段】</label>
-                <div class="tag-container" id="centralContainer" onclick="focusInput('central')">
-                    <div id="centralTagsWrapper" style="display:contents"></div>
-                    <input type="text" id="centralInput" placeholder="輸入後按 Enter..." autocomplete="off" enterkeyhint="enter">
-                </div>
-                <div id="centralCounter" class="limit-counter">--/--</div>
-                
-                <p class="hint-text">💡 輸入後按下 <b>Enter</b> 新增，點擊 <b>×</b> 刪除。</p>
-            </div>
-
+            <div id="dynamicGroups"></div>
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
             <div id="status"></div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // ★★★ 設定區 ★★★
         const MY_LIFF_ID = "2008700928-mrYiKQ76";
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         
-        let userMaxLimit = 5; // 預設值
-        let isTrial = false;  // ★ 新增：判斷是否為體驗版用戶
-        // ==========================================
+        let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [] };
+        let userTags = {}; // 格式: { "社團名稱": ["標籤1", "標籤2"] }
 
-        let northTags = []; 
-        let centralTags = [];
-        let currentUserNotionId = "";
-
-        window.onload = function () {
-            initializeLiff();
-        };
+        window.onload = initializeLiff;
 
         async function initializeLiff() {
             try {
                 await liff.init({ liffId: MY_LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
+                if (!liff.isLoggedIn()) { liff.login(); return; }
                 const profile = await liff.getProfile();
-                window.currentUser = profile;
                 document.getElementById('userInfo').innerText = "Hi, " + profile.displayName;
                 await fetchCurrentData(profile.userId);
-            } catch (err) {
-                document.getElementById('loadingBlock').innerHTML = `<p style="color:red">初始化失敗: ${err.message}</p>`;
-            }
+            } catch (err) { document.getElementById('loadingBlock').innerHTML = "初始化失敗"; }
         }
 
-       async function fetchCurrentData(userId) {
+        async function fetchCurrentData(userId) {
             try {
                 const res = await fetch(`${GET_URL}?userId=${userId}`);
                 let data = await res.json();
+                if (Array.isArray(data)) data = data[0];
 
-                if (Array.isArray(data)) {
-                    data = data[0];
-                }
+                config.tagLimit = data.tagLimit || 5;
+                config.groupLimit = data.groupLimit || 1;
+                config.isTrial = (data.isUserFound === false);
+                config.groupList = data.groupList || [];
 
-                // ==========================================
-                // ★★★ 核心修改 1：不阻擋 false，而是轉為體驗版模式 ★★★
-                // ==========================================
-                const tierEl = document.getElementById('tierInfo');
+                // 初始化標籤資料
+                config.groupList.forEach(name => {
+                    userTags[name] = data.preferences[name] ? data.preferences[name].split(/[,、]/).map(t=>t.trim()).filter(t=>t) : [];
+                });
 
-                if (data.isUserFound === false) {
-                    // 查無此人 -> 體驗版模式
-                    isTrial = true;
-                    userMaxLimit = 3; // 體驗版總上限 3 個
-                    tierEl.innerText = ` 體驗版 (總上限 3 個)`;
-                    tierEl.classList.remove('tier-god');
-                } else {
-                    // 舊客/正式會員模式
-                    isTrial = false;
-                    if (data.tagLimit) {
-                        userMaxLimit = parseInt(data.tagLimit);
-                    }
-                    const tierName = data.userTierName || "Basic";
-                    
-                    if (userMaxLimit > 50) {
-                        tierEl.innerText = ` ${tierName} ( 無限制)`;
-                        tierEl.classList.add('tier-god');
-                    } else {
-                        tierEl.innerText = ` ${tierName} (上限${userMaxLimit}個)`;
-                        tierEl.classList.remove('tier-god');
-                    }
-                    
-                    if (data.notionId) { currentUserNotionId = data.notionId; }
-                    
-                    if (data.northPreferences) { northTags = parseTags(data.northPreferences); }
-                    else if (data.preferences) { northTags = parseTags(data.preferences); }
-                    
-                    if (data.centralPreferences) { centralTags = parseTags(data.centralPreferences); }
-                }
-
+                document.getElementById('tierInfo').innerText = data.userTierName || (config.isTrial ? "體驗版" : "正式版");
+                renderDynamicGroups();
                 document.getElementById('loadingBlock').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
-
-                drawAllTags(); // 更新畫面與計數器
-            } catch (err) {
-                console.error(err);
-                document.getElementById('loadingBlock').style.display = 'none';
-                document.getElementById('content').style.display = 'block';
-                document.getElementById('status').innerText = "讀取資料時發生錯誤";
-                drawAllTags();
-            }
+            } catch (err) { document.getElementById('status').innerText = "讀取失敗"; }
         }
 
-        function parseTags(str) {
-            if(!str) return [];
-            return str.split(/[,、]/).map(t => t.trim()).filter(t => t !== "");
-        }
-
-        const northInput = document.getElementById('northInput');
-        const centralInput = document.getElementById('centralInput');
-
-        northInput.addEventListener('keydown', (e) => handleInput(e, 'north'));
-        northInput.addEventListener('blur', () => addTag('north'));
-
-        centralInput.addEventListener('keydown', (e) => handleInput(e, 'central'));
-        centralInput.addEventListener('blur', () => addTag('central'));
-
-        function handleInput(e, type) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addTag(type);
-                
-                // ★★★ 核心修改 2：判斷是否還能繼續輸入 ★★★
-                const targetArray = type === 'north' ? northTags : centralTags;
-                let canAdd = false;
-                
-                if (isTrial) {
-                    // 體驗版：看「兩個社團的總和」
-                    canAdd = (northTags.length + centralTags.length) < userMaxLimit;
-                } else {
-                    // 正式版：看「單一社團」
-                    canAdd = targetArray.length < userMaxLimit;
-                }
-
-                if (canAdd) {
-                    document.getElementById(type + 'Input').focus();
-                }
-            }
-        }
-
-        function focusInput(type) {
-            const targetArray = type === 'north' ? northTags : centralTags;
-            let canAdd = false;
+        function renderDynamicGroups() {
+            const container = document.getElementById('dynamicGroups');
+            container.innerHTML = '';
             
-            if (isTrial) {
-                canAdd = (northTags.length + centralTags.length) < userMaxLimit;
-            } else {
-                canAdd = targetArray.length < userMaxLimit;
-            }
+            // 計算目前已經「動用」了幾個社團
+            const activeGroupsCount = Object.values(userTags).filter(tags => tags.length > 0).length;
 
-            if (canAdd) {
-                document.getElementById(type + 'Input').focus();
-            }
-        }
+            config.groupList.forEach(groupName => {
+                const isThisGroupActive = userTags[groupName].length > 0;
+                // 判斷該社團是否應被禁用：非本人的社團且已達社團總數上限
+                const isDisabled = !config.isTrial && !isThisGroupActive && activeGroupsCount >= config.groupLimit;
 
-        function addTag(type) {
-            const inputEl = document.getElementById(type + 'Input');
-            const targetArray = type === 'north' ? northTags : centralTags;
-            const val = inputEl.value.trim();
+                const groupDiv = document.createElement('div');
+                groupDiv.className = `form-group ${isDisabled ? 'disabled' : ''}`;
+                groupDiv.innerHTML = `
+                    <label>📍 【${groupName}】</label>
+                    <div class="tag-container" id="cont_${groupName}" onclick="document.getElementById('input_${groupName}').focus()">
+                        <div id="wrap_${groupName}" style="display:contents"></div>
+                        <input type="text" id="input_${groupName}" placeholder="${isDisabled ? '等級權限不足' : '輸入後按 Enter...'}" ${isDisabled ? 'disabled' : ''}>
+                    </div>
+                    <div id="count_${groupName}" class="limit-counter"></div>
+                `;
+                container.appendChild(groupDiv);
 
-            if (!val) return;
-
-            // ★★★ 核心修改 3：新增標籤時的阻擋邏輯 ★★★
-            if (isTrial) {
-                if (northTags.length + centralTags.length >= userMaxLimit) {
-                    inputEl.value = ''; 
-                    return;
-                }
-            } else {
-                if (targetArray.length >= userMaxLimit) {
-                    inputEl.value = ''; 
-                    return;
-                }
-            }
-
-            if (!targetArray.includes(val)) {
-                targetArray.push(val);
-                drawAllTags();
-            }
-            inputEl.value = '';
-        }
-
-        window.removeTag = function (type, index) {
-            if (type === 'north') northTags.splice(index, 1);
-            else centralTags.splice(index, 1);
-            drawAllTags();
-        };
-
-        function drawAllTags() {
-            renderTagsToDiv(northTags, 'northTagsWrapper', 'north');
-            renderTagsToDiv(centralTags, 'centralTagsWrapper', 'central');
-            
-            updateCounter('north', northTags.length);
-            updateCounter('central', centralTags.length);
-        }
-
-        function renderTagsToDiv(tags, wrapperId, type) {
-            const wrap = document.getElementById(wrapperId);
-            wrap.innerHTML = '';
-            tags.forEach((t, i) => {
-                const div = document.createElement('div');
-                div.className = 'tag';
-                div.innerHTML = `${escapeHtml(t)} <span onclick="removeTag('${type}', ${i})">×</span>`;
-                wrap.appendChild(div);
+                const input = document.getElementById(`input_${groupName}`);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTag(groupName, input.value);
+                        input.value = '';
+                    }
+                });
+                renderTags(groupName);
             });
         }
 
-        // ★★★ 核心修改 4：顯示文字改成「總額度」 ★★★
-        function updateCounter(type, currentCount) {
-            const counterEl = document.getElementById(type + 'Counter');
-            const containerEl = document.getElementById(type + 'Container');
+        function addTag(groupName, val) {
+            val = val.trim();
+            if (!val) return;
+
+            const totalTags = Object.values(userTags).flat().length;
             
-            if (isTrial) {
-                // 體驗版：顯示全域總和
-                const totalCount = northTags.length + centralTags.length;
-                
-                if (totalCount >= userMaxLimit) {
-                    counterEl.innerText = `總額度已滿 (${totalCount}/${userMaxLimit})`;
-                    counterEl.classList.add('warning');
-                    containerEl.classList.add('full');
-                } else {
-                    counterEl.innerText = `體驗版總額度: ${totalCount} / ${userMaxLimit}`;
-                    counterEl.classList.remove('warning');
-                    containerEl.classList.remove('full');
-                }
-            } else {
-                // 正式版：原本的邏輯
-                if (userMaxLimit > 50) {
-                    counterEl.innerText = `目前已設定: ${currentCount} 個`;
-                    counterEl.classList.remove('warning');
-                    containerEl.classList.remove('full');
-                } else {
-                    counterEl.innerText = `${currentCount} / ${userMaxLimit}`;
-                    
-                    if (currentCount >= userMaxLimit) {
-                        counterEl.classList.add('warning');
-                        containerEl.classList.add('full');
-                        counterEl.innerText = `已達上限 (${currentCount}/${userMaxLimit})`;
-                    } else {
-                        counterEl.classList.remove('warning');
-                        containerEl.classList.remove('full');
-                    }
-                }
+            // 體驗版全域限制
+            if (config.isTrial && totalTags >= 3) return;
+            // 正式版單社團限制
+            if (!config.isTrial && userTags[groupName].length >= config.tagLimit) return;
+
+            if (!userTags[groupName].includes(val)) {
+                userTags[groupName].push(val);
+                renderDynamicGroups(); // 重新渲染以觸發其他社團的禁用邏輯
             }
         }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        function removeTag(groupName, index) {
+            userTags[groupName].splice(index, 1);
+            renderDynamicGroups();
+        }
+
+        function renderTags(groupName) {
+            const wrap = document.getElementById(`wrap_${groupName}`);
+            const counter = document.getElementById(`count_${groupName}`);
+            wrap.innerHTML = '';
+            
+            userTags[groupName].forEach((t, i) => {
+                const tag = document.createElement('div');
+                tag.className = 'tag';
+                tag.innerHTML = `${t} <span onclick="removeTag('${groupName}', ${i})">×</span>`;
+                wrap.appendChild(tag);
+            });
+
+            if (config.isTrial) {
+                const total = Object.values(userTags).flat().length;
+                counter.innerText = `體驗版總額度: ${total}/3`;
+            } else {
+                counter.innerText = `${userTags[groupName].length}/${config.tagLimit}`;
+            }
         }
 
         async function submitData() {
             const btn = document.getElementById('saveBtn');
-            const status = document.getElementById('status');
-
-            if (northTags.length === 0 && centralTags.length === 0) {
-                status.innerText = "❌ 請至少輸入一個關注的攤位";
-                return;
-            }
-
             btn.disabled = true;
             btn.innerText = "儲存中...";
-            status.innerText = "";
 
             try {
-                const northString = northTags.join(', ');
-                const centralString = centralTags.join(', ');
+                // 將 userTags 扁平化為 NocoDB 欄位格式
+                const payload = {
+                    userId: window.currentUser.userId,
+                    userName: window.currentUser.displayName,
+                    isTrial: config.isTrial
+                };
+                
+                // 動態合併所有社團字串
+                Object.keys(userTags).forEach(name => {
+                    payload[name] = userTags[name].join(', ');
+                });
 
                 const res = await fetch(SAVE_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        userId: window.currentUser.userId,
-                        // 如果是體驗版，可以把 displayName 傳回後端建檔用
-                        userName: window.currentUser.displayName,
-                        northPreferences: northString,
-                        centralPreferences: centralString,
-                        notionId: currentUserNotionId,
-                        isTrial: isTrial // 告訴後端這是體驗版用戶的新增
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (res.ok) {
-                    status.innerText = "✅ 設定已更新！";
-                    status.style.color = "#1DB446";
-                    btn.disabled = false;
-                    btn.innerText = "儲存設定";
-                    
-                    // 儲存成功後，體驗版用戶其實就變成正式寫入資料庫了
-                    // 為了避免再次觸發新建，把 isTrial 狀態解除 (或重新整理網頁)
-                    if (isTrial) {
-                        setTimeout(() => { location.reload(); }, 1500);
-                    } else {
-                        setTimeout(() => { 
-                            if(status.innerText.includes("✅")) status.innerText = ""; 
-                        }, 3000);
-                    }
-                } else {
-                    throw new Error("伺服器錯誤");
+                    document.getElementById('status').innerText = "✅ 設定已更新！";
+                    setTimeout(() => location.reload(), 1500);
                 }
             } catch (err) {
-                status.innerText = "❌ 失敗: " + err.message;
-                status.style.color = "red";
+                document.getElementById('status').innerText = "❌ 失敗: " + err.message;
                 btn.disabled = false;
-                btn.innerText = "儲存設定";
             }
         }
     </script>
 </body>
 </html>
-
-
