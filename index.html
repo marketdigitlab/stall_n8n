@@ -93,49 +93,64 @@
         }
 
         function renderDynamicGroups() {
-            const container = document.getElementById('dynamicGroups');
-            container.innerHTML = '';
-            const usedGroups = Object.keys(userTags).filter(name => userTags[name].length > 0);
-            const usedCount = usedGroups.length;
-
-            config.groupList.forEach(groupName => {
-                const hasTags = userTags[groupName].length > 0;
-                const isDisabled = !hasTags && usedCount >= config.groupLimit;
-                const safeId = groupName.replace(/\s+/g,'_');
-
-                const groupDiv = document.createElement('div');
-                groupDiv.className = `form-group ${isDisabled ? 'disabled' : ''}`;
-                groupDiv.innerHTML = `
-                    <label>📍 【${groupName}】</label>
-                    <div class="tag-container" id="cont_${safeId}" onclick="if(!${isDisabled}) document.getElementById('input_${safeId}').focus()">
-                        <div id="wrap_${safeId}" style="display:contents"></div>
-                        <input type="text" id="input_${safeId}" placeholder="${isDisabled ? '等級權限不足' : '輸入關鍵字...'}" ${isDisabled ? 'disabled' : ''} autocomplete="off">
-                    </div>
-                    <div id="count_${safeId}" class="limit-counter"></div>
-                `;
-                container.appendChild(groupDiv);
-
-                const input = document.getElementById(`input_${safeId}`);
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
+        const container = document.getElementById('dynamicGroups');
+        container.innerHTML = '';
+        const usedGroups = Object.keys(userTags).filter(name => userTags[name].length > 0);
+        const usedCount = usedGroups.length;
+    
+        config.groupList.forEach(groupName => {
+            const hasTags = userTags[groupName].length > 0;
+            const isDisabled = !hasTags && usedCount >= config.groupLimit;
+            const safeId = groupName.replace(/\s+/g,'_');
+    
+            const groupDiv = document.createElement('div');
+            groupDiv.className = `form-group ${isDisabled ? 'disabled' : ''}`;
+            groupDiv.innerHTML = `
+                <label>📍 【${groupName}】</label>
+                <div class="tag-container" id="cont_${safeId}" onclick="if(!${isDisabled}) document.getElementById('input_${safeId}').focus()">
+                    <div id="wrap_${safeId}" style="display:contents"></div>
+                    <input type="text" id="input_${safeId}" placeholder="${isDisabled ? '等級權限不足' : '輸入關鍵字...'}" ${isDisabled ? 'disabled' : ''} autocomplete="off">
+                </div>
+                <div id="count_${safeId}" class="limit-counter"></div>
+            `;
+            container.appendChild(groupDiv);
+    
+            const input = document.getElementById(`input_${safeId}`);
+            
+            // ★ 修改點：拿掉 blur 事件，只保留 Enter 新增，防止打字中途刷新
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (input.value.trim()) {
                         addTag(groupName, input.value);
-                        input.value = '';
+                        input.value = ''; // 新增後清空輸入框
                     }
-                });
-                renderTags(groupName);
+                }
             });
-        }
+            renderTags(groupName);
+        });
+    }    
 
         function addTag(groupName, val) {
             val = val.trim();
-            if (!val || userTags[groupName].length >= config.tagLimit) return;
+            if (!val) return;
+        
+            // 檢查單社團上限
+            if (userTags[groupName].length >= config.tagLimit) {
+                return; 
+            }
+        
+            // 檢查是否重複
             if (!userTags[groupName].includes(val)) {
                 userTags[groupName].push(val);
+                // 只有確定加入後，才觸發 UI 刷新
                 renderDynamicGroups();
+                
+                // 增加一個小動作：自動聚焦回剛才的輸入框，方便連續輸入
+                const nextInput = document.getElementById(`input_${groupName.replace(/\s+/g,'_')}`);
+                if (nextInput) nextInput.focus();
             }
         }
-
         function removeTag(groupName, index) {
             userTags[groupName].splice(index, 1);
             renderDynamicGroups();
@@ -204,3 +219,4 @@
     </script>
 </body>
 </html>
+
