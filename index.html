@@ -49,7 +49,8 @@
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         
-        let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [] };
+        // ★ 新增 blacklist 陣列來接資料庫名單
+        let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [], blacklist: [] };
         let userTags = {}; 
         let currentUser = null;
 
@@ -78,6 +79,9 @@
                 config.groupLimit = data.groupLimit || 1;
                 config.isTrial = (data.isUserFound === false);
                 config.groupList = data.groupList || [];
+                
+                // ★ 接收從 n8n 傳來的黑名單 (如果沒有就給空陣列)
+                config.blacklist = data.blacklist || [];
 
                 config.groupList.forEach(name => {
                     userTags[name] = data.preferences[name] ? data.preferences[name].split(/[,、]/).map(t=>t.trim()).filter(t=>t) : [];
@@ -122,16 +126,14 @@
                         e.preventDefault();
                         if (input.value.trim()) {
                             addTag(groupName, input.value);
-                            input.value = ''; 
+                            // 如果沒過黑名單檢查，值就不會清空，讓使用者可以修改
                         }
                     }
                 });
 
-                // ★ 還原舊版：支援 Blur 自動加入標籤
                 input.addEventListener('blur', () => {
                     if (input.value.trim()) {
                         addTag(groupName, input.value);
-                        input.value = '';
                     }
                 });
 
@@ -143,10 +145,16 @@
             val = val.trim();
             if (!val) return;
             if (userTags[groupName].length >= config.tagLimit) return; 
+
+            // ★★★ 防呆 1：使用者輸入當下直接擋掉黑名單 ★★★
+            if (config.blacklist.includes(val)) {
+                alert(`⚠️ 關鍵字範圍太大囉！\n\n請勿單獨設定「${val}」。這會讓您收到太多無效通知。\n請加上攤位號碼或具體位置（例如：${val}111）再試一次！`);
+                return; // 直接中斷，不讓他變標籤
+            }
+
             if (!userTags[groupName].includes(val)) {
                 userTags[groupName].push(val);
                 renderDynamicGroups();
-                // 恢復焦點方便連續輸入
                 const nextInput = document.getElementById(`input_${groupName.replace(/\s+/g,'_')}`);
                 if (nextInput) nextInput.focus();
             }
@@ -177,18 +185,30 @@
         }
 
         async function submitData() {
-            // ★ 防呆：儲存前強制檢查所有輸入框內的「殘留文字」
+            let hasBlacklistError = false;
+            let errorWord = "";
+
+            // ★★★ 防呆 2：儲存前強制檢查所有輸入框內的「殘留文字」是否踩雷 ★★★
             config.groupList.forEach(groupName => {
                 const safeId = groupName.replace(/\s+/g,'_');
                 const input = document.getElementById(`input_${safeId}`);
                 if (input && input.value.trim()) {
                     const val = input.value.trim();
-                    if (!userTags[groupName].includes(val) && userTags[groupName].length < config.tagLimit) {
+                    if (config.blacklist.includes(val)) {
+                        hasBlacklistError = true;
+                        errorWord = val;
+                    } else if (!userTags[groupName].includes(val) && userTags[groupName].length < config.tagLimit) {
                         userTags[groupName].push(val);
+                        input.value = ''; // 通過檢查才清空
                     }
-                    input.value = '';
                 }
             });
+
+            // 如果有殘留文字踩到地雷，直接中止儲存
+            if (hasBlacklistError) {
+                alert(`⚠️ 關鍵字範圍太大囉！\n\n請勿單獨設定「${errorWord}」。這會讓您收到太多無效通知。\n請加上攤位號碼或具體位置（例如：${errorWord}111）再試一次！`);
+                return;
+            }
 
             if (!currentUser || !currentUser.userId) {
                 alert("尚未取得身分資訊，請重新整理頁面。");
@@ -223,7 +243,6 @@
                     status.style.color = "#1DB446";
                     btn.disabled = false;
                     btn.innerText = "儲存設定";
-                    // ★ 移除 location.reload()，改為 3 秒後清除成功文字
                     setTimeout(() => { status.innerText = ""; }, 3000);
                 } else {
                     throw new Error("儲存失敗");
