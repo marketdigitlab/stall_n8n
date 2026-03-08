@@ -150,7 +150,7 @@
             if (userTags[groupName].length >= config.tagLimit) return false; 
 
             if (config.blacklist.includes(val)) {
-                alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點（如：${val}111）。`);
+                alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
                 return false;
             }
 
@@ -207,7 +207,7 @@
             });
 
             if (hasBlacklistError) {
-                alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點（如：${val}111）。`);
+                alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
                 return;
             }
 
@@ -257,5 +257,6 @@
     </script>
 </body>
 </html>
+
 
 
