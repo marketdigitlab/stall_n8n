@@ -42,7 +42,7 @@
             <p class="hint">💡 輸入後按 Enter 或點擊空白處新增，點擊 × 刪除。</p>
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
             <div id="status"></div>
-            <div class="version">System Version: v1.1 (黑名單防護版)</div>
+            <div class="version">System Version: v1.1</div>
         </div>
     </div>
 
@@ -81,8 +81,6 @@
                 config.groupLimit = data.groupLimit || 1;
                 config.isTrial = (data.isUserFound === false);
                 config.groupList = data.groupList || [];
-                
-                // ★ 接收從 n8n 傳來的黑名單資料
                 config.blacklist = data.blacklist || [];
 
                 config.groupList.forEach(name => {
@@ -127,7 +125,6 @@
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         if (input.value.trim()) {
-                            // 如果成功加入才清空輸入框，失敗(踩到黑名單)則保留文字讓用戶修改
                             if (addTag(groupName, input.value)) {
                                 input.value = ''; 
                             }
@@ -152,9 +149,8 @@
             if (!val) return false;
             if (userTags[groupName].length >= config.tagLimit) return false; 
 
-            // ★★★ 防呆檢查：如果觸發黑名單，跳出警告並回傳 false 中斷 ★★★
             if (config.blacklist.includes(val)) {
-                alert(`⚠️ 關鍵字範圍太大囉！\n\n請勿單獨設定「${val}」。這會讓您收到太多無效通知。\n請加上攤位號碼或具體位置（例如：${val}111）再試一次！`);
+                alert(`⚠️ 範圍太大！請輸入更精確的位置（如：${val}111）。`);
                 return false;
             }
 
@@ -192,7 +188,6 @@
         }
 
         async function submitData() {
-            // ★ 儲存前的雙重防呆：確保輸入框內殘留的字也沒有踩到黑名單
             let hasBlacklistError = false;
             let errorWord = "";
 
@@ -212,7 +207,7 @@
             });
 
             if (hasBlacklistError) {
-                alert(`⚠️ 關鍵字範圍太大囉！\n\n請勿單獨設定「${errorWord}」。這會讓您收到太多無效通知。\n請加上攤位號碼或具體位置（例如：${errorWord}111）再試一次！`);
+                alert(`⚠️ 範圍太大！請輸入更精確的位置（如：${val}111）。`);
                 return;
             }
 
@@ -262,3 +257,4 @@
     </script>
 </body>
 </html>
+
