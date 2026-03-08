@@ -26,6 +26,7 @@
         #loadingBlock { text-align: center; padding: 30px 0; }
         #content { display: none; }
         .hint { font-size: 11px; color: #aaa; margin-top: 10px; text-align: center; }
+        .version { font-size: 11px; color: #ccc; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -41,6 +42,7 @@
             <p class="hint">💡 輸入後按 Enter 或點擊空白處新增，點擊 × 刪除。</p>
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
             <div id="status"></div>
+            <div class="version">System Version: v1.1 (黑名單防護版)</div>
         </div>
     </div>
 
@@ -49,7 +51,7 @@
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         
-        // ★ 新增 blacklist 陣列來接資料庫名單
+        // ★ 加上 blacklist 陣列
         let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [], blacklist: [] };
         let userTags = {}; 
         let currentUser = null;
@@ -80,7 +82,7 @@
                 config.isTrial = (data.isUserFound === false);
                 config.groupList = data.groupList || [];
                 
-                // ★ 接收從 n8n 傳來的黑名單 (如果沒有就給空陣列)
+                // ★ 接收從 n8n 傳來的黑名單資料
                 config.blacklist = data.blacklist || [];
 
                 config.groupList.forEach(name => {
@@ -125,15 +127,19 @@
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         if (input.value.trim()) {
-                            addTag(groupName, input.value);
-                            // 如果沒過黑名單檢查，值就不會清空，讓使用者可以修改
+                            // 如果成功加入才清空輸入框，失敗(踩到黑名單)則保留文字讓用戶修改
+                            if (addTag(groupName, input.value)) {
+                                input.value = ''; 
+                            }
                         }
                     }
                 });
 
                 input.addEventListener('blur', () => {
                     if (input.value.trim()) {
-                        addTag(groupName, input.value);
+                        if (addTag(groupName, input.value)) {
+                            input.value = '';
+                        }
                     }
                 });
 
@@ -143,13 +149,13 @@
 
         function addTag(groupName, val) {
             val = val.trim();
-            if (!val) return;
-            if (userTags[groupName].length >= config.tagLimit) return; 
+            if (!val) return false;
+            if (userTags[groupName].length >= config.tagLimit) return false; 
 
-            // ★★★ 防呆 1：使用者輸入當下直接擋掉黑名單 ★★★
+            // ★★★ 防呆檢查：如果觸發黑名單，跳出警告並回傳 false 中斷 ★★★
             if (config.blacklist.includes(val)) {
                 alert(`⚠️ 關鍵字範圍太大囉！\n\n請勿單獨設定「${val}」。這會讓您收到太多無效通知。\n請加上攤位號碼或具體位置（例如：${val}111）再試一次！`);
-                return; // 直接中斷，不讓他變標籤
+                return false;
             }
 
             if (!userTags[groupName].includes(val)) {
@@ -158,6 +164,7 @@
                 const nextInput = document.getElementById(`input_${groupName.replace(/\s+/g,'_')}`);
                 if (nextInput) nextInput.focus();
             }
+            return true;
         }
 
         function removeTag(groupName, index) {
@@ -185,10 +192,10 @@
         }
 
         async function submitData() {
+            // ★ 儲存前的雙重防呆：確保輸入框內殘留的字也沒有踩到黑名單
             let hasBlacklistError = false;
             let errorWord = "";
 
-            // ★★★ 防呆 2：儲存前強制檢查所有輸入框內的「殘留文字」是否踩雷 ★★★
             config.groupList.forEach(groupName => {
                 const safeId = groupName.replace(/\s+/g,'_');
                 const input = document.getElementById(`input_${safeId}`);
@@ -199,12 +206,11 @@
                         errorWord = val;
                     } else if (!userTags[groupName].includes(val) && userTags[groupName].length < config.tagLimit) {
                         userTags[groupName].push(val);
-                        input.value = ''; // 通過檢查才清空
+                        input.value = '';
                     }
                 }
             });
 
-            // 如果有殘留文字踩到地雷，直接中止儲存
             if (hasBlacklistError) {
                 alert(`⚠️ 關鍵字範圍太大囉！\n\n請勿單獨設定「${errorWord}」。這會讓您收到太多無效通知。\n請加上攤位號碼或具體位置（例如：${errorWord}111）再試一次！`);
                 return;
