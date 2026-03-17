@@ -42,7 +42,7 @@
             <p class="hint">💡 輸入後按 Enter 或點擊空白處新增，點擊 × 刪除。</p>
             <button id="saveBtn" onclick="submitData()">儲存設定</button>
             <div id="status"></div>
-            <div class="version">System Version: v1.1</div>
+            <div class="version">System Version: v1.2</div>
         </div>
     </div>
 
@@ -51,7 +51,6 @@
         const GET_URL = "https://stall.marketdigitlab.com/webhook/get-stall-preference";
         const SAVE_URL = "https://stall.marketdigitlab.com/webhook/save-stall-preference";
         
-        // ★ 加上 blacklist 陣列
         let config = { tagLimit: 5, groupLimit: 1, isTrial: false, groupList: [], blacklist: [] };
         let userTags = {}; 
         let currentUser = null;
@@ -144,7 +143,7 @@
             });
         }    
         let isAlerting = false;
-        function addTag(groupName, val) {
+        function addTag(groupName, val, inputElement = null) {
             val = val.trim();
             if (!val) return false;
             if (userTags[groupName].length >= config.tagLimit) return false; 
@@ -152,17 +151,18 @@
             if (config.blacklist.includes(val)) {
                 if (!isAlerting) {
                     isAlerting = true;
-                    alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
-                    if (inputElement) {
-                        setTimeout(() => {
-                            inputElement.focus();
-                            isAlerting = false;
-                        }, 50);
-                    } else {
+                    
+                    setTimeout(() => {
+                        alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
+                        
+                        if (inputElement) {
+                            inputElement.focus(); 
+                            inputElement.select();
+                        }
                         isAlerting = false;
-                    }
+                    }, 50);
                 }
-                return false;
+                return false; 
             }
 
             if (!userTags[groupName].includes(val)) {
