@@ -125,7 +125,7 @@
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         if (input.value.trim()) {
-                            if (addTag(groupName, input.value)) {
+                            if (addTag(groupName, input.value, input)) {
                                 input.value = ''; 
                             }
                         }
@@ -134,7 +134,7 @@
 
                 input.addEventListener('blur', () => {
                     if (input.value.trim()) {
-                        if (addTag(groupName, input.value)) {
+                        if (addTag(groupName, input.value, input)) {
                             input.value = '';
                         }
                     }
@@ -143,14 +143,25 @@
                 renderTags(groupName);
             });
         }    
-
+        let isAlerting = false;
         function addTag(groupName, val) {
             val = val.trim();
             if (!val) return false;
             if (userTags[groupName].length >= config.tagLimit) return false; 
 
             if (config.blacklist.includes(val)) {
-                alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
+                if (!isAlerting) {
+                    isAlerting = true;
+                    alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
+                    if (inputElement) {
+                        setTimeout(() => {
+                            inputElement.focus();
+                            isAlerting = false;
+                        }, 50);
+                    } else {
+                        isAlerting = false;
+                    }
+                }
                 return false;
             }
 
@@ -207,7 +218,9 @@
             });
 
             if (hasBlacklistError) {
-                alert(`⚠️「${val}」範圍太大！\n請加上具體攤位地點\n（如：${val}111）。`);
+                if (!isAlerting) {
+                    alert(`⚠️「${errorWord}」範圍太大！\n請加上具體攤位地點\n（如：${errorWord}111）。`);
+                }
                 return;
             }
 
